@@ -1,3 +1,6 @@
 [submodule "third_party/express"]
 	path = third_party/express
 	url = http://github.com/visionmedia/express.git
+[submodule "third_party/node_mDNS"]
+	path = third_party/node_mDNS
+	url = http://github.com/agnat/node_mDNS.git
