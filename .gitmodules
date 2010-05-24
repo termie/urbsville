@@ -4,3 +4,6 @@
 [submodule "third_party/node_mDNS"]
 	path = third_party/node_mDNS
 	url = http://github.com/agnat/node_mDNS.git
+[submodule "third_party/node_ws"]
+	path = third_party/node_ws
+	url = http://github.com/ncr/node.ws.js.git
