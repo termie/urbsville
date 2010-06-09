@@ -18,19 +18,6 @@ var urb = require('urb')
  * 3. Announce itself on the local network
  */
 
-//function curry (fn, scope) {
-//    // from http://www.dustindiaz.com/javascript-curry/
-//    // callback = curry(fn, scope, ..any extra args..)
-//    var scope = scope || window;
-//    var args = [];
-//    for (var i=2, len = arguments.length; i < len; ++i) {
-//        args.push(arguments[i]);
-//    };
-//    return function() {
-//      fn.apply(scope, args);
-//    };
-//}
-
 
 configure(function(){
   set('root', __dirname),
