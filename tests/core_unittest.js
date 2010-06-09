@@ -38,8 +38,23 @@ UrbTestCase.prototype.extend({
     var mockDev = mock.createMock(urb.ToggleDevice);
     var urber = new urb.Urb([]);
 
+    mockDev.expects().id().andReturn('test');
     mockDev.expects().addListener(jsmock.isA(Object));
     urber.addDevice(mockDev);
+    mock.verify();
+  },
+  testPropagateDataFromDevices: function () {
+    var mock = new jsmock.MockControl();
+    var mockListener = mock.createMock(urb.TopicListener);
+    var dev = new urb.Device('test');
+    var urber = new urb.Urb([dev]);
+
+    urber.addListener(mockListener);
+    mockListener.expects().send(jsmock.isA(Object));
+
+    dev.notifyStateChange('test');
+    mock.verify();
+
   },
 });
 
