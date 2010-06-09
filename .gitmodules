@@ -7,3 +7,9 @@
 [submodule "third_party/node_ws"]
 	path = third_party/node_ws
 	url = http://github.com/ncr/node.ws.js.git
+[submodule "third_party/node-unittest"]
+	path = third_party/node-unittest
+	url = git://github.com/termie/node-unittest.git
+[submodule "third_party/node-jsmock"]
+	path = third_party/node-jsmock
+	url = git://github.com/termie/node-jsmock.git
