@@ -1,6 +1,3 @@
-[submodule "third_party/express"]
-	path = third_party/express
-	url = http://github.com/visionmedia/express.git
 [submodule "third_party/node_mDNS"]
 	path = third_party/node_mDNS
 	url = http://github.com/agnat/node_mDNS.git
@@ -13,3 +10,12 @@
 [submodule "third_party/node-jsmock"]
 	path = third_party/node-jsmock
 	url = git://github.com/termie/node-jsmock.git
+[submodule "third_party/Socket.IO-node"]
+	path = third_party/Socket.IO-node
+	url = http://github.com/LearnBoost/Socket.IO-node.git
+[submodule "third_party/Socket.IO"]
+	path = third_party/Socket.IO
+	url = http://github.com/LearnBoost/Socket.IO.git
+[submodule "third_party/express"]
+	path = third_party/express
+	url = git://github.com/visionmedia/express.git

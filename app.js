@@ -1,13 +1,16 @@
-require.paths.unshift('./third_party/express/lib/')
-require.paths.unshift('./third_party/node_mDNS/')
-require.paths.unshift('./third_party/node_ws/')
-require.paths.unshift('./lib')
-require('express')
-require('express/plugins')
-var sys = require('sys')
-
-
-var urb = require('urb')
+require.paths.unshift('./third_party/express/lib/');
+require.paths.unshift('./third_party/node_mDNS/');
+require.paths.unshift('./public/js');
+require.paths.unshift('./third_party/Socket.IO-node/lib');
+require.paths.unshift('./lib');
+require('express');
+require('express/plugins');
+var http = require('http');
+var sys = require('sys');
+var urb = require('urb');
+var urb_node = require('urb-node');
+// should import the one from third_party
+var io = require('socket.io');
 
 // var Class imported by require('express')
 
@@ -20,24 +23,39 @@ var urb = require('urb')
 
 
 configure(function(){
-  set('root', __dirname),
-  use(Static)
-})
+  set('root', __dirname);
+  use(Static);
+});
 
 get('/', function () {
   this.render('index.html.ejs', {
     locals: {}
-  })
+  });
 });
+run(8000);
 
-var dev = new urb.ToggleDevice(0);
+var dev = new urb.ExampleDevice('example1');
+var hub = new urb.Urb('Urb', 'example2');
+hub.addDevice(dev);
 
-web = new urb.UrbWebSocket(new urb.Urb([dev]));
-web.listen(8001);
+ws = new urb_node.SocketIoServer('example3');
+ws.addUrb(hub);
+ws.listen(8001, {transports: ['websocket']});
+
+
+ws.addListener(new urb.Listener(/.*/, function (event) { 
+    sys.puts('ws ' + event.data); }));
+hub.addListener(new urb.Listener(/.*/, function (event) {
+    sys.puts('hub ' + event.data); }));
+dev.addListener(new urb.Listener(/.*/, function (event) {
+    sys.puts('dev ' + event.data); }));
 
 setInterval(function () {
-    sys.puts('toggle')
-    dev.setState(!dev.state)
-}, 1000);
-
-run(8000)
+    if (dev.getProperty('state')) {
+      sys.puts('toggle -> 0');
+      dev.setProperty('state', 0);
+    } else {
+      sys.puts('toggle -> 1');
+      dev.setProperty('state', 1);
+    }
+}, 2000);
