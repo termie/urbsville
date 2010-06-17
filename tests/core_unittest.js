@@ -8,24 +8,27 @@ var DeviceTestCase = function () { unittest.TestCase.call(this); }
 sys.inherits(DeviceTestCase, unittest.TestCase);
 DeviceTestCase.prototype.extend({
   testAddRemoveListeners: function () {
-    var dev = new urb.Device('test');
-    var listener = new urb.TopicListener({}, 'some_topic');
+    var dev = new urb.Device('Device', 'test');
+    var listener = new urb.Listener();
     
     dev.addListener(listener);
-    this.assertEqual(dev.listeners.length, 1);
+    this.assertEqual(dev.listeners().length, 1);
     
     dev.removeListener(listener);
-    this.assertEqual(dev.listeners.length, 0);
+    this.assertEqual(dev.listeners().length, 0);
   },
-  testNotifyListenerOnStateChange: function () {
-    var dev = new urb.Device('test');
-    var mock = new jsmock.MockControl();
-    var mockListener = mock.createMock(urb.TopicListener);
+  testNotifyListenerOnPropertyChange: function () {
+    var dev = new urb.Device('Device', 'test', {foo: 'bar'});
 
+    var mock = new jsmock.MockControl();
+
+    var mockListener = mock.createMock(urb.Listener);
+    
+    mockListener.expects().match(jsmock.isA(Array)).andReturn(true);
     mockListener.expects().send(jsmock.isA(Object));
 
     dev.addListener(mockListener);
-    dev.notifyStateChange('test');
+    dev.setProperty('foo', 'baz');
     mock.verify();
   },
 });
@@ -35,24 +38,25 @@ sys.inherits(UrbTestCase, unittest.TestCase);
 UrbTestCase.prototype.extend({
   testListenForDeviceChanges: function () {
     var mock = new jsmock.MockControl();
-    var mockDev = mock.createMock(urb.ToggleDevice);
-    var urber = new urb.Urb([]);
+    var mockDev = mock.createMock(urb.Device);
+    var urber = new urb.Urb('Urb', 'test');
 
-    mockDev.expects().id().andReturn('test');
     mockDev.expects().addListener(jsmock.isA(Object));
     urber.addDevice(mockDev);
     mock.verify();
   },
   testPropagateDataFromDevices: function () {
     var mock = new jsmock.MockControl();
-    var mockListener = mock.createMock(urb.TopicListener);
-    var dev = new urb.Device('test');
-    var urber = new urb.Urb([dev]);
+    var mockListener = mock.createMock(urb.Listener);
+    var dev = new urb.Device('Device', 'test', {foo: 'bar'});
+    var urber = new urb.Urb('Urb', 'test');
 
     urber.addListener(mockListener);
+    urber.addDevice(dev);
+    mockListener.expects().match(jsmock.isA(Array)).andReturn(true);
     mockListener.expects().send(jsmock.isA(Object));
 
-    dev.notifyStateChange('test');
+    dev.notifyListeners({topic: ['foo'], data: 'bar'});
     mock.verify();
 
   },

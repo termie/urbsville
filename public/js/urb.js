@@ -3,12 +3,6 @@ if (typeof exports === 'undefined') {
 }
 
 
-
-function merge(array, args) {
-  return update(array, args);
-}
-
-
 function curry(fn, scope) {
   var __method = fn;
   var self = scope || window;
@@ -74,6 +68,7 @@ Evented.prototype = {
   dict: function () {
     return {kind: this.kind(), name: this.name(), id: this.id()};
   },                        
+  listeners: function () { return this._listeners; },
   addListener: function (listener) {
     this._listeners.push(listener);
   },
@@ -132,6 +127,35 @@ extend(Device.prototype, {
 exports.Device = Device;
 
 
+var DeviceProxy = function () {
+  Device_.apply(this, arguments);
+};
+inherit(DeviceProxy, Device);
+extend(DeviceProxy.prototype, {
+  /* update internal state and notify listeners */
+  onEvent: function (event) {
+    var matcher = /property\/(.*)/;
+    for (var i in event) {
+      var match = matcher.exec(event[i]);
+      if (match) {
+        this._setProperty(match[1], event.data);
+      }
+    }
+  },
+  _setProperty: function () {
+    Device.prototype.setProperty.apply(this, arguments);
+  },
+  /* tell the remote device to setProperty */
+  setProperty: function () {
+    this._connection.send({kind: 'rpc',
+                           topic: this.id(),
+                           method: 'setProperty',
+                           arguments: arguments});
+  }
+});
+exports.DeviceProxy = DeviceProxy;
+
+
 var ExampleDevice = function (name, properties) {
   Device.apply(this, ['ExampleDevice', name, properties]);
 };
@@ -140,6 +164,7 @@ extend(ExampleDevice.prototype, {
   _properties: {'state': 0}
 });
 exports.ExampleDevice = ExampleDevice;
+
 
 var Urb = function (kind, name) {
   Evented.apply(this, arguments);
@@ -187,35 +212,6 @@ extend(UrbProxy.prototype, {
   }
 });
 exports.UrbProxy = UrbProxy;
-
-
-var DeviceProxy = function () {
-  Device_.apply(this, arguments);
-};
-inherit(DeviceProxy, Device);
-extend(DeviceProxy.prototype, {
-  /* update internal state and notify listeners */
-  onEvent: function (event) {
-    var matcher = /property\/(.*)/;
-    for (var i in event) {
-      var match = matcher.exec(event[i]);
-      if (match) {
-        this._setProperty(match[1], event.data);
-      }
-    }
-  },
-  _setProperty: function () {
-    Device.prototype.setProperty.apply(this, arguments);
-  },
-  /* tell the remote device to setProperty */
-  setProperty: function () {
-    this._connection.send({kind: 'rpc',
-                           topic: this.id(),
-                           method: 'setProperty',
-                           arguments: arguments});
-  }
-});
-exports.DeviceProxy = DeviceProxy;
 
 
 var Listener = function (matcher, callback) {
