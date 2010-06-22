@@ -16,3 +16,6 @@
 [submodule "third_party/express"]
 	path = third_party/express
 	url = git://github.com/visionmedia/express.git
+[submodule "third_party/node-osc"]
+	path = third_party/node-osc
+	url = git://github.com/termie/node-osc.git
