@@ -81,7 +81,7 @@ Evented.prototype = {
    * Serialize this instance, usually for sending over the wire.
    * @returns {Object} A simple object of strings
    */
-  dict: function () {
+  toDict: function () {
     return {kind: this.kind(), name: this.name(), id: this.id()};
   },                        
   listeners: function () { return this._listeners; },
@@ -128,13 +128,15 @@ exports.Evented = Evented;
 
 var Device = function(kind, name, properties) {
   Evented.apply(this, arguments);
+  if (!this._properties) {
+    this._properties = {};
+  }
   if (properties) {
     extend(this._properties, properties);
   }
 };
 inherit(Device, Evented);
 extend(Device.prototype, {
-  _properties: {},
   properties: function () { return this._properties; },
   getProperty: function (property) {
     if (this._properties[property] === undefined) {
@@ -326,7 +328,7 @@ extend(Server.prototype, {
     urb.addListener(this.urbListener());
     this._urbs.push(urb);
     this.notifyClients({kind: 'urb',
-                        data: urb.dict()});
+                        data: urb.toDict()});
   },
   /* returns the urb listener singleton */
   urbListener: function () {

@@ -6,8 +6,12 @@ require.paths.unshift('./public/js');
 require.paths.unshift('./lib')
 require.paths.unshift('./tests')
 
-var core_unittest = require('core_unittest');
+var unittest = require('unittest');
 
-for (k in core_unittest) {
-  new core_unittest[k]().run();
-}
+var core_unittest = require('core_unittest');
+var evented_unittest = require('evented_unittest');
+var device_unittest = require('device_unittest');
+
+unittest.run([core_unittest,
+              evented_unittest,
+              device_unittest]);
