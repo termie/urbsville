@@ -138,6 +138,11 @@ var Device = function(kind, name, properties) {
 inherit(Device, Evented);
 extend(Device.prototype, {
   properties: function () { return this._properties; },
+  toDict: function () {
+    var dict = Evented.prototype.toDict();
+    dict.properties = this.properties();
+    return dict;
+  },
   getProperty: function (property) {
     if (this._properties[property] === undefined) {
       throw 'not a valid property: ' + property;
@@ -158,7 +163,7 @@ exports.Device = Device;
 
 
 var DeviceProxy = function () {
-  Device_.apply(this, arguments);
+  Device.apply(this, arguments);
 };
 inherit(DeviceProxy, Device);
 extend(DeviceProxy.prototype, {
@@ -383,11 +388,12 @@ exports.Server = Server;
 
 
 /**
- * Accepts remote devices and publishes them locally
+ * Accepts connections from remote devices and publishes them locally
  * @param {Urb} An Urb instance through which to publish the devices
  * @constructor
  */
-var DeviceServer = function (urb) {
+var DeviceServer = function (urb, kind, name) {
+  Evented.call(this, kind, name);
   this.urb = urb;
   this._clients = {};
 };
@@ -412,7 +418,7 @@ extend(DeviceServer.prototype, {
   },
   onClientMessage: function (message, client) {
     if (message.kind == 'device') {
-      this.onDevice(message.data);
+      this.onDevice(message.data, client);
     } else if (message.kind == 'event') {
       this.onEvent(message.data);
     }
@@ -433,6 +439,7 @@ extend(DeviceServer.prototype, {
     this.notifyListeners(event);
   },
 });
+exports.DeviceServer = DeviceServer;
 
 var Client = function () {
   Evented.apply(this, arguments);
