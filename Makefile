@@ -1,4 +1,5 @@
 jsl=jsl
+jsdoc=tools/jsdoc-toolkit
 
 build: third_party/node-unittest/README.rst third_party/node_mDNS/binding.node public/js/socket.io.js
 
@@ -18,5 +19,13 @@ third_party/node-unittest/README.rst:
 test: build
 	node run_tests.js
 
-lint: test
-	$(jsl) -process public/js/*.js -process lib/*.js
+lint:
+	$(jsl) -process public/js/urb\*.js -process lib/\*.js -process tests/\*.js -nologo -nofilelisting
+
+docs: $(jsdoc)
+	java -Djsdoc.dir=$(jsdoc) -jar $(jsdoc)/jsrun.jar $(jsdoc)/app/run.js \
+		-t=$(jsdoc)/templates/jsdoc ./lib public/js/urb*.js -d=jsdoc
+
+$(jsdoc):
+	svn checkout http://jsdoc-toolkit.googlecode.com/svn/tags/jsdoc_toolkit-2.4.0/jsdoc-toolkit $(jsdoc)
+	
