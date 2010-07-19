@@ -1,6 +1,6 @@
 [submodule "third_party/node_mDNS"]
 	path = third_party/node_mDNS
-	url = http://github.com/agnat/node_mDNS.git
+	url = http://github.com/agnat/node_mdns.git
 [submodule "third_party/node-unittest"]
 	path = third_party/node-unittest
 	url = git://github.com/termie/node-unittest.git
