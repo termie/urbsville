@@ -56,6 +56,12 @@ function clone(obj) {
 exports.clone = clone;
 
 
+/**
+ * Base class for objects that send or receive events.
+ * @param {String} kind Like a class identifier
+ * @param {String} name A unique identifier for this object within its class
+ * @constructor
+ */
 var Evented = function (kind, name) {
   this._listeners = [];
   this._name = name;
@@ -64,14 +70,32 @@ var Evented = function (kind, name) {
 Evented.prototype = {
   kind: function () { return this._kind; },
   name: function () { return this._name; },
+  /**
+   * Return what we hope is a unique identifier for this instance.
+   *
+   * Defaults to be kind + / + name.
+   * @returns {String} Unique identifier for this instance
+   */
   id: function () { return this.kind() + '/' + this.name(); },
+  /**
+   * Serialize this instance, usually for sending over the wire.
+   * @returns {Object} A simple object of strings
+   */
   dict: function () {
     return {kind: this.kind(), name: this.name(), id: this.id()};
   },                        
   listeners: function () { return this._listeners; },
+  /**
+   * Add to this instance's list of listeners.
+   * @param {implements Listener} listener
+   */
   addListener: function (listener) {
     this._listeners.push(listener);
   },
+  /**
+   * Remove a listener from this instance's list of listeners.
+   * @param {implements Listener} listener
+   */
   removeListener: function (listener) {
     for (var i in this._listeners) {
       if (this._listeners[i] == listener) {
@@ -80,6 +104,10 @@ Evented.prototype = {
       }
     }
   },
+  /**
+   * Notify interested listeners about an event
+   * @param {Object} An object with a list of topics and some data
+   */
   notifyListeners: function (event) {
     if (event.topic.indexOf(this.id()) === -1) {
       event.topic.unshift(this.id());
@@ -350,6 +378,12 @@ extend(Server.prototype, {
   }
 });
 exports.Server = Server;
+
+
+
+var DeviceServer = function () {
+  
+}
 
 
 var Client = function () {
