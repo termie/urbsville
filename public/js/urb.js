@@ -382,11 +382,57 @@ extend(Server.prototype, {
 exports.Server = Server;
 
 
-
-var DeviceServer = function () {
-  
-}
-
+/**
+ * Accepts remote devices and publishes them locally
+ * @param {Urb} An Urb instance through which to publish the devices
+ * @constructor
+ */
+var DeviceServer = function (urb) {
+  this.urb = urb;
+  this._clients = {};
+};
+inherit(DeviceServer, Evented);
+extend(DeviceServer.prototype, {
+  /** @lends DeviceServer.prototype */
+  listen: function(port, options) {
+    // Not Implemented
+  },
+  onClientConnect: function (client) {
+    this._clients[client.id()] = [];
+    this.notifyListeners({topic: ['deviceserver/clientConnect'],
+                          data: client.id()});
+  },
+  onClientDisconnect: function (client) {
+    for (var i in this._clients[client.id()]) {
+      this.urb.removeDevice(this._clients[client.id()][i]);
+    }
+    delete this._clients[client.id()];
+    this.notifyListeners({topic: ['deviceserver/clientDisconnect'],
+                          data: client.id()});
+  },
+  onClientMessage: function (message, client) {
+    if (message.kind == 'device') {
+      this.onDevice(message.data);
+    } else if (message.kind == 'event') {
+      this.onEvent(message.data);
+    }
+  },
+  onDevice: function (device, client) {
+    var proxy = new DeviceProxy(device.kind, 
+                                device.name,
+                                device.properties,
+                                this);
+    this.addListener(new Listener(new RegExp(proxy.id()),
+                                  curry(proxy.onEvent, proxy)));
+    this._clients[client.id()].push(proxy);
+    this.urb.addDevice(proxy);
+    this.notifyListeners({topic: ['deviceserver/device'],
+                          data: proxy.id()});
+  },
+  onEvent: function (event) {
+    this.notifyListeners(event);
+  },
+});
 
 var Client = function () {
   Evented.apply(this, arguments);
