@@ -1,5 +1,4 @@
 
-
 function curry(fn, scope) {
   var __method = fn;
   var self = scope || window;
@@ -52,10 +51,9 @@ function clone(obj) {
 /** Interfaces */
 
 /**
- * Base class for objects that send or receive events.
+ * @class Base class for objects that send or receive events.
  * @param {String} kind Like a class identifier
  * @param {String} name A unique identifier for this object within its class
- * @constructor
  */
 var Evented = function (kind, name) {
   this._listeners = [];
@@ -112,7 +110,7 @@ Evented.prototype = {
       var newEvent = clone(event);
       //sys.puts(this.id() + ' 2event.data: ' + newEvent.data);
       if (this._listeners[i].match(newEvent.topic)) {
-        //sys.puts(this.id() + ' 3event.data: ' + newEvent.data);
+        //sys.puts(sys.inspect(newEvent));
         this._listeners[i].send(newEvent);
       }
     }
@@ -161,6 +159,7 @@ Proxy.prototype = {
   }
 };
 
+
 /**
  * @class Connection interface. **For documentation purposes only.**
  *
@@ -176,7 +175,7 @@ Connection.prototype = {
 }
 
 
-/** Data Types */
+/** Data types */
 
 /**
  * @class Event data type. **For documentation purposes only.**
@@ -249,10 +248,13 @@ Message.prototype = {
 }
 
 
-/** Basic Classes */
+/** Basic classes */
 
+/**
+ * @constructor
+ */
 var Device = function(kind, name, properties) {
-  Evented.apply(this, arguments);
+  Evented.call(this, kind, name);
   if (!this._properties) {
     this._properties = {};
   }
@@ -261,10 +263,11 @@ var Device = function(kind, name, properties) {
   }
 };
 inherit(Device, Evented);
+/** @lends Device.prototype */
 extend(Device.prototype, {
   properties: function () { return this._properties; },
   toDict: function () {
-    var dict = Evented.prototype.toDict();
+    var dict = Evented.prototype.toDict.call(this);
     dict.properties = this.properties();
     return dict;
   },
@@ -286,11 +289,15 @@ extend(Device.prototype, {
 });
 
 
+/**
+ * @constructor
+ */
 var Urb = function (kind, name) {
   Evented.apply(this, arguments);
   this._devices = [];
 };
 inherit(Urb, Evented);
+/** @lends Urb.prototype */
 extend(Urb.prototype, {
   devices: function () { return this._devices; },
   addDevice: function (device) {
@@ -327,7 +334,7 @@ extend(Urb.prototype, {
 /** Proxies */
 
 /**
- * @class Proxy for a Device being accessed remotely.
+ * @class DeviceProxy for a Device being accessed remotely.
  * Uses something of a hacked up mixin pattern to add Proxy methods.
  *
  * Instances of this class are used Client-side to represent Devices on a
@@ -336,14 +343,12 @@ extend(Urb.prototype, {
  * Instances of this class are also used Server-side to represent Devices
  * being provided to a DeviceServer by a remote DeviceClient.
  *
- * @param {String} kind {@link Evented#}
- * @param {String} name {@link Evented#}
- * @param {String} properties {@link Device#}
- * @param {implements Connection} connection {@link Proxy#}
+ * @param {String} kind {@link Evented}
+ * @param {String} name {@link Evented}
+ * @param {String} properties {@link Device}
+ * @param {implements Connection} connection {@link Proxy}
  *
  * @extends Device
- * @borrows Proxy#rpc as this.rpc
- * 
  */
 var DeviceProxy = function (kind, name, properties, connection) {
   Device.call(this, kind, name, properties);
@@ -351,18 +356,18 @@ var DeviceProxy = function (kind, name, properties, connection) {
 };
 inherit(DeviceProxy, Device);
 extend(DeviceProxy.prototype, Proxy.prototype);
+/** @lends DeviceProxy.prototype */
 extend(DeviceProxy.prototype, {
-  /** @lends DeviceProxy.prototype */
   /**
    * Update internal state and notify listeners when receiving remote state.
    * @param {Object} event A simple event object.
    */
   onEvent: function (event) {
     var matcher = /property\/(.*)/;
-    for (var i in event) {
-      var match = matcher.exec(event[i]);
+    for (var i in event.topic) {
+      var match = matcher.exec(event.topic[i]);
       if (match) {
-        this._setProperty(match[1], event.data);
+        this._setProperty(match[1], event.data[match[1]]);
       }
     }
   },
@@ -387,8 +392,9 @@ extend(DeviceProxy.prototype, {
   }
 });
 
+
 /**
- * @class Proxy for an Urb being accessed remotely.
+ * @class UrbProxy for an Urb being accessed remotely.
  * Uses something of a hacked up mixin pattern to add Proxy methods.
  *
  * Instances of this class are used Client-side to represent an Urb on a remote
@@ -397,7 +403,6 @@ extend(DeviceProxy.prototype, {
  * @param {String} kind {@link Evented#}
  * @param {String} name {@link Evented#}
  * @param {implements Connection} connection {@link Proxy#}
- *
  * @extends Urb
  * @borrows Proxy#rpc as this.rpc
  */
@@ -407,19 +412,21 @@ var UrbProxy = function (kind, name, connection) {
 };
 inherit(UrbProxy, Urb);
 extend(UrbProxy.prototype, Proxy.prototype);
+/** @lends UrbProxy.prototype */
 extend(UrbProxy.prototype, {
-  /** @lends UrbProxy.prototype */
+  /**
+   * @params {Object} event {@link Event}
+   */
   onEvent: function (event) {
     // pass
   }
 });
 
 
-
 /** Client-side */
 
-/*
- * @class Client-side API client, connects to an ApiServer.
+/**
+ * @class ApiClient Client-side API client, connects to an ApiServer.
  *
  * Builds a local representation with UrbProxy and DeviceProxy objects.
  * 
@@ -431,17 +438,21 @@ extend(UrbProxy.prototype, {
 var ApiClient = function () {
   Evented.apply(this, arguments);
   this._urb = null;
+  this.transport = null;
 };
 inherit(ApiClient, Evented);
+/** @lends ApiClient.prototype */
 extend(ApiClient.prototype, {
-  /** @lends ApiClient.prototype */
   /**
-   * Initiate a connection. To be implemented by subclass.
+   * Initiate a connection using the given transport.
    *
    * TODO(termie): Should probably clear current state if any exists.
+   *
+   * @param {implements Transport} transport {@link Transport} 
    */
-  connect: function () {
-    // Not Implemented
+  connect: function (transport) {
+    this.transport = transport;
+    this.transport.connect(this)
   },
   /**
    * Event handler for connect events. Notifies listeners.
@@ -532,24 +543,27 @@ extend(ApiClient.prototype, {
 /** Server-side */
 
 /**
- * @class Server that provides access to Urbs and their Devices
- * 
+ * @class ApiServer provides access to Urbs and their Devices
  * @extends Evented
  */
 var ApiServer = function () {
   Evented.apply(this, arguments);
   this._clients = [];
   this._urbs = [];
+  this.transport = null;
   this.addListener(this.serverListener());
 };
 inherit(ApiServer, Evented);
+/** @lends ApiServer.prototype */
 extend(ApiServer.prototype, {
-  /** @lends Server.prototype */
   /**
-   * Initiate listening by the ApiServer. To be implemented by subclasses.
+   * Initiate listening by the ApiServer using given Transport.
+   *
+   * @param {implements Transport} transport {@link Transport}
    */
-  listen: function(port, options) {
-    // Not Implemented
+  listen: function(transport) {
+    this.transport = transport;
+    this.transport.listen(this);
   },
   /**
    * Add an Urb to the list of Urbs brokered by the ApiServer.
@@ -672,49 +686,21 @@ extend(ApiServer.prototype, {
 });
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-var ExampleDevice = function (name, properties) {
-  Device.apply(this, ['ExampleDevice', name, properties]);
-};
-inherit(ExampleDevice, Device);
-extend(ExampleDevice.prototype, {
-  _properties: {'state': 0}
-});
-
-
-
-
-
-
-
-
-
-
-
 /**
- * Accepts connections from remote devices and publishes them locally
+ * @class Accepts connections from remote devices and publishes them locally
  * @param {Urb} An Urb instance through which to publish the devices
- * @constructor
  */
-var DeviceServer = function (urb, kind, name) {
+var DeviceServer = function (kind, name, urb) {
   Evented.call(this, kind, name);
   this.urb = urb;
   this._clients = {};
 };
 inherit(DeviceServer, Evented);
+/** @lends DeviceServer */
 extend(DeviceServer.prototype, {
-  /** @lends DeviceServer.prototype */
+  /**
+   * Initiate listening by the DeviceServer. To be implemented by subclasses.
+   */
   listen: function(port, options) {
     // Not Implemented
   },
@@ -739,6 +725,7 @@ extend(DeviceServer.prototype, {
     }
   },
   onDevice: function (device, client) {
+    //sys.puts(sys.inspect(device));
     var proxy = new DeviceProxy(device.kind, 
                                 device.name,
                                 device.properties,
@@ -755,6 +742,32 @@ extend(DeviceServer.prototype, {
   },
 });
 
+
+/** Device implementations */
+
+/**
+ * @constructor
+ */
+var ExampleDevice = function (name, properties) {
+  this._properties = {'state': 0};
+  Device.call(this, 'ExampleDevice', name, properties);
+};
+inherit(ExampleDevice, Device);
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * @constructor
+ */
 var Client = function () {
   Evented.apply(this, arguments);
 };
@@ -769,6 +782,7 @@ extend(Client.prototype, {
 
 
 if (typeof exports === 'undefined') {
+  /** @namespace Holds exports */
   exports = {};
 }
 
@@ -785,16 +799,13 @@ exports.Urb = Urb;
 
 exports.ExampleDevice = ExampleDevice;
 
-/** Server-side Interfaces to Urbs*/
 exports.ApiServer = ApiServer;
 //exports.WebServer = WebServer;
 exports.DeviceServer = DeviceServer;
 
-/** Client-side Interfaces to Urbs */
 exports.ApiClient = ApiClient;
 //exports.DeviceClient = DeviceClient;
 
-/** Proxies used */
 exports.DeviceProxy = DeviceProxy;
 exports.UrbProxy = UrbProxy;
 //exports.ApiClientProxy = ApiClientProxy;

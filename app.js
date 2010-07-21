@@ -38,10 +38,10 @@ var dev = new urb.ExampleDevice('example1');
 var hub = new urb.Urb('Urb', 'example2');
 hub.addDevice(dev);
 
-ws = new urb_node.SocketIoServer('example3');
+var ws = new urb.ApiServer('ApiServer', 'example3');
 ws.addUrb(hub);
-ws.listen(8001, {transports: ['websocket']});
 
+var transport = new urb_node.SocketIoServerTransport(8001, {transports: ['websocket']});
 
 ws.addListener(new urb.Listener(/.*/, function (event) { 
     sys.puts('ws ' + event.data); }));
@@ -49,6 +49,8 @@ hub.addListener(new urb.Listener(/.*/, function (event) {
     sys.puts('hub ' + event.data); }));
 dev.addListener(new urb.Listener(/.*/, function (event) {
     sys.puts('dev ' + event.data); }));
+
+ws.listen(transport);
 
 setInterval(function () {
     if (dev.getProperty('state')) {

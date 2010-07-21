@@ -19,19 +19,21 @@ DeviceServerTestCase.prototype.extend({
   tearDown: function () {
     this.mock.verify();
   },
-  testConnectDisconnect: function () {
-    var server = new urb.DeviceServer(this.urbber);
+  testBasic: function () {
+    var server = new urb.DeviceServer('deviceserver', 'example', this.urbber);
 
     this.assertEqual(this.urbber.devices().length, 0);
-
     server.onClientConnect(this.fakeClient);
     server.onDevice(this.device.toDict(), this.fakeClient);
     this.assertEqual(this.urbber.devices().length, 1);
     
     this.assertEqual(this.urbber.devices()[0].getProperty('state'), 0);
-
-    this.device.setProperty('state', 1);
-
+    server.onClientMessage({kind: 'event',
+                            data: {topic: [this.device.id(),
+                                           'property/state'],
+                                   data: {'state': 1}
+                                   }
+                            }, this.fakeClient);
     this.assertEqual(this.urbber.devices()[0].getProperty('state'), 1);
 
     server.onClientDisconnect(this.fakeClient);
