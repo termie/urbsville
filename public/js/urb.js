@@ -469,7 +469,7 @@ extend(DeviceProxy.prototype, {
   propertyListener: function () {
     if (!this._propertyListener) {
       this._propertyListener = new Listener(
-        new RegExp('property\/changed'), curry(this.onPropertyChanged, this));
+        new RegExp('property/changed'), curry(this.onPropertyChanged, this));
     }
     return this._propertyListener;
   },
@@ -620,6 +620,10 @@ extend(ApiClient.prototype, {
     this.transport = transport;
     this.transport.connect(this)
   },
+  disconnect: function () {
+    this.transport.disconnect();
+    this.transport = null;
+  },
   /**
    * Event handler for connect events. Notifies listeners.
    */
@@ -679,9 +683,88 @@ extend(ApiClient.prototype, {
   urbListener: function (urb) {
     if (!this._urbListener) {
       this._urbListener = new Listener(
-          new RegExp(urb.id()), curry(urb.notifyProxyListeners, urb));
+          new RegExp(urb.id()), curry(urb.onEvent, urb));
     }
     return this._urbListener;
+  },
+  send: function (message) {
+    this.transport.send(message);
+  }
+});
+
+var DeviceClient = function (kind, name, device) {
+  Evented.call(this, kind, name);
+  this.transport = null;
+  this.device = device;
+  this.device.addListener(this.deviceListener());
+};
+inherit(DeviceClient, Evented);
+/** @lends DeviceClient.prototype */
+extend(DeviceClient.prototype, {
+  /**
+   * Initiate a connection using the given transport.
+   *
+   * TODO(termie): Should probably clear current state if any exists.
+   *
+   * @param {implements Transport} transport {@link Transport} 
+   */
+  connect: function (transport) {
+    this.transport = transport;
+    this.transport.connect(this)
+  },
+  disconnect: function () {
+    this.transport.disconnect();
+    this.transport = null;
+  },
+  /**
+   * Event handler for connect events. Notifies listeners.
+   */
+  onConnect: function () {
+    this.send({kind: 'device',
+               data: this.device.toDict()});
+    this.notifyListeners({topic: ['deviceclient/connect'],
+                          data: this.id()});
+  },
+  /**
+   * Event handler for disconnect events. Notifies listeners.
+   *
+   */
+  onDisconnect: function () {
+    this.notifyListeners({topic: ['deviceclient/disconnect'],
+                          data: this.id()});
+  },
+  /**
+   * Generic event handler. Notify listeners.
+   *
+   * In many cases the event will be a state change event for a remote Device.
+   *
+   * @param {Object} event {@link Event}
+   */
+  onEvent: function (event) {
+    this.send({kind: 'event', data: event});
+  },
+  /**
+   * Handles receiving a new message from the remote DeviceServer.
+   *
+   * @param {object} message {@link Message}
+   */
+  onMessage: function (message) {
+    if (message.kind == 'rpc') {
+      this.notifyListeners({topic: ['deviceclient/rpc'],
+                            data: message.data});
+      this.onRpc(message.data);
+    }
+  },
+  onRpc: function (rpc) {
+    if (rpc.id == this.device.id()) {
+      this.device[rpc.method].apply(this.device, rpc.args);
+    }
+  },
+  deviceListener: function () {
+    if (!this._deviceListener) {
+      this._deviceListener = new Listener(/.*/, curry(this.onEvent, this));
+    }
+    return this._deviceListener;
   },
   send: function (message) {
     this.transport.send(message);
@@ -698,8 +781,8 @@ extend(ApiClient.prototype, {
 var ApiServer = function (kind, name, urb) {
   Evented.call(this, kind, name);
   this._clients = [];
-  this.urb = urb;
   this.transport = null;
+  this.urb = urb;
   this.urb.addListener(this.urbListener());
 };
 inherit(ApiServer, Evented);
@@ -725,10 +808,6 @@ extend(ApiServer.prototype, {
     }
     return this._urbListener; 
   },
-  /**
-   * Notifies clients on events from the ApiServer.
-   * @return {Listener} A listener singleton for events from the ApiServer 
-   */
   /**
    * Notify connected clients
    *
@@ -826,15 +905,14 @@ var DeviceServer = function (kind, name, urb) {
   Evented.call(this, kind, name);
   this.urb = urb;
   this._clients = {};
+  this.transport = null;
 };
 inherit(DeviceServer, Evented);
 /** @lends DeviceServer */
 extend(DeviceServer.prototype, {
-  /**
-   * Initiate listening by the DeviceServer. To be implemented by subclasses.
-   */
-  listen: function(port, options) {
-    // Not Implemented
+  listen: function(transport) {
+    this.transport = transport;
+    this.transport.listen(this);
   },
   onClientConnect: function (client) {
     this._clients[client.id()] = [];
@@ -861,7 +939,7 @@ extend(DeviceServer.prototype, {
     var proxy = new DeviceProxy(device.kind, 
                                 device.name,
                                 device.properties,
-                                this);
+                                client);
     this.addListener(new Listener(new RegExp(proxy.id()),
                                   curry(proxy.onEvent, proxy)));
     this._clients[client.id()].push(proxy);
@@ -871,7 +949,7 @@ extend(DeviceServer.prototype, {
   },
   onEvent: function (event) {
     this.notifyListeners(event);
-  },
+  }
 });
 
 
@@ -963,7 +1041,7 @@ exports.ApiServer = ApiServer;
 exports.DeviceServer = DeviceServer;
 
 exports.ApiClient = ApiClient;
-//exports.DeviceClient = DeviceClient;
+exports.DeviceClient = DeviceClient;
 
 exports.DeviceProxy = DeviceProxy;
 exports.UrbProxy = UrbProxy;
