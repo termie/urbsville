@@ -38,8 +38,7 @@ var dev = new urb.ExampleDevice('example1');
 var hub = new urb.Urb('Urb', 'example2');
 hub.addDevice(dev);
 
-var ws = new urb.ApiServer('ApiServer', 'example3');
-ws.addUrb(hub);
+var ws = new urb.ApiServer('ApiServer', 'example3', hub);
 
 var transport = new urb_node.SocketIoServerTransport(8001, {transports: ['websocket']});
 

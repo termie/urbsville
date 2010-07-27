@@ -1,7 +1,7 @@
 <h1>Hey</h1>
 
 <script>
-  var client = new ApiClient();
+  var client = new ApiClient('ApiClient', 'test1');
   var transport = new SocketIoClientTransport('localhost', {port: 8001});
   
   client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));

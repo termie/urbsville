@@ -30,7 +30,7 @@ DeviceServerTestCase.prototype.extend({
     this.assertEqual(this.urbber.devices()[0].getProperty('state'), 0);
     server.onClientMessage({kind: 'event',
                             data: {topic: [this.device.id(),
-                                           'property/state'],
+                                           'property/changed'],
                                    data: {'state': 1}
                                    }
                             }, this.fakeClient);

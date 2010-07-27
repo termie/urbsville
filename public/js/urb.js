@@ -1,4 +1,5 @@
 
+
 function curry(fn, scope) {
   var __method = fn;
   var self = scope || window;
@@ -142,8 +143,44 @@ Listener.prototype = {
  */
 var Proxy = function (connection) {
   this._connection = connection;
+  this._proxyListeners = [];
 };
 Proxy.prototype = {
+  proxyListeners: function () { return this._proxyListeners; },
+  /**
+   * Add to this instance's list of listeners.
+   * @param {implements Listener} listener
+   */
+  addProxyListener: function (listener) {
+    this._proxyListeners.push(listener);
+  },
+  /**
+   * Remove a listener from this instance's list of listeners.
+   * @param {implements Listener} listener
+   */
+  removeProxyListener: function (listener) {
+    for (var i in this._proxyListeners) {
+      if (this._proxyListeners[i] == listener) {
+        this._proxyListeners.splice(i, 1);
+        break;
+      }
+    }
+  },
+  /**
+   * Notify interested listeners about an event
+   * @param {Object} An object with a list of topics and some data
+   */
+  notifyProxyListeners: function (event) {
+    //sys.puts(this.id() + ' 1event.data: ' + sys.inspect(event.data));
+    for (var i in this._proxyListeners) {
+      var newEvent = clone(event);
+      //sys.puts(this.id() + ' 2event.data: ' + newEvent.data);
+      if (this._proxyListeners[i].match(newEvent.topic)) {
+        //sys.puts(sys.inspect(newEvent));
+        this._proxyListeners[i].send(newEvent);
+      }
+    }
+  },
   /**
    * Executes an RPC
    * @param {String} id Target object of the RPC
@@ -152,9 +189,9 @@ Proxy.prototype = {
    */
   rpc: function (id, method, args) {
     this._connection.send({kind: 'rpc',
-                           data: {topic: id,
+                           data: {id: id,
                                   method: method,
-                                  arguments: args}
+                                  args: args}
                            });
   }
 };
@@ -173,6 +210,73 @@ Connection.prototype = {
    */
   send: function (obj) { }
 }
+
+
+/**
+ * @class ClientTransport is a base class for Client-side transports.
+ *
+ * It will usually be passed to a Client's connect method.
+ */
+var ClientTransport = function () {
+  this._callbackObj = null;
+}
+ClientTransport.prototype = {
+  connect: function (callbackObj) {
+    this._callbackObj = callbackObj;
+  },
+  onConnect: function () {
+    this._callbackObj.onConnect.call(this._callbackObj, this);
+  },
+  onDisconnect: function () {
+    this._callbackObj.onDisconnect.call(this._callbackObj, this);
+  },
+  onMessage: function (message) {
+    var parsed = this.parseMessage(message);
+    this._callbackObj.onMessage.call(this._callbackObj, parsed, this);
+  },
+  send: function (message) {
+    // pass
+  },
+  parseMessage: function (message) {
+    return JSON.parse(message);
+  },
+  serializeMessage: function (message) {
+    return JSON.stringify(message);
+  }
+};
+
+
+/**
+ * @class ServerTransport is an interface class for Server-side transports.
+ *
+ * It will usually be passed to a Server's listen method.
+ */
+var ServerTransport = function () {
+  this._callbackObj = null;
+}
+ServerTransport.prototype = {
+  listen: function (callbackObj) {
+    this._callbackObj = callbackObj;
+  },
+  onClientConnect: function (client) {
+    this._callbackObj.onClientConnect.call(this._callbackObj, client, this);
+  },
+  onClientDisconnect: function (client) {
+    this._callbackObj.onClientDisconnect.call(this._callbackObj, client, this);
+  },
+  onClientMessage: function (message, client) {
+    var parsed = this.parseMessage(message);
+    this._callbackObj.onClientMessage.call(
+        this._callbackObj, parsed, client, this);
+  },
+  parseMessage: function (message) {
+    return JSON.parse(message);
+  },
+  serializeMessage: function (message) {
+    return JSON.stringify(message);
+  }
+};
+
 
 
 /** Data types */
@@ -217,7 +321,7 @@ Rpc.prototype = {
   /**
    * List of arguments to call the method with.
    */
-  arguments: []
+  args: []
 }
 
 
@@ -281,9 +385,12 @@ extend(Device.prototype, {
     if (this._properties[property] === undefined) {
       throw 'not a valid property: ' + property;
     }
+    data = {}
+    data[property] = value;
     this._properties[property] = value;
-    var event = {topic: ['property/' + property],
-                 data: value};
+    var event = {topic: ['property/changed'],
+                 data: data
+                 };
     this.notifyListeners(event);
   }
 });
@@ -310,7 +417,7 @@ extend(Urb.prototype, {
   },
   removeDevice: function (device) {
     for (var i in this._devices) {
-      if (this._devices[i] == device) {
+      if (this._devices[i].id() == device.id()) {
         device.removeListener(this.deviceListener());
         this.notifyListeners({topic: ['urb/deviceRemoved'],
                               data: device.toDict()});
@@ -353,22 +460,29 @@ extend(Urb.prototype, {
 var DeviceProxy = function (kind, name, properties, connection) {
   Device.call(this, kind, name, properties);
   Proxy.call(this, connection);
+  this.addProxyListener(this.propertyListener());
 };
 inherit(DeviceProxy, Device);
 extend(DeviceProxy.prototype, Proxy.prototype);
 /** @lends DeviceProxy.prototype */
 extend(DeviceProxy.prototype, {
+  propertyListener: function () {
+    if (!this._propertyListener) {
+      this._propertyListener = new Listener(
+        new RegExp('property\/changed'), curry(this.onPropertyChanged, this));
+    }
+    return this._propertyListener;
+  },
   /**
    * Update internal state and notify listeners when receiving remote state.
    * @param {Object} event A simple event object.
    */
   onEvent: function (event) {
-    var matcher = /property\/(.*)/;
-    for (var i in event.topic) {
-      var match = matcher.exec(event.topic[i]);
-      if (match) {
-        this._setProperty(match[1], event.data[match[1]]);
-      }
+    this.notifyProxyListeners(event);
+  },
+  onPropertyChanged: function (event) {
+    for (var i in event.data) {
+      this._setProperty(i, event.data[i]);
     }
   },
   /**
@@ -387,8 +501,8 @@ extend(DeviceProxy.prototype, {
    *
    * @see Device#setProperty
    */
-  setProperty: function () {
-    this.rpc(this.id(), 'setProperty', arguments);
+  setProperty: function (property, value) {
+    this.rpc(this.id(), 'setProperty', [property, value]);
   }
 });
 
@@ -409,16 +523,68 @@ extend(DeviceProxy.prototype, {
 var UrbProxy = function (kind, name, connection) {
   Urb.call(this, kind, name);
   Proxy.call(this, connection);
+  this._deviceProxyListeners = {};
+  this.addProxyListener(this.deviceAddedListener());
+  this.addProxyListener(this.deviceRemovedListener());
 };
 inherit(UrbProxy, Urb);
 extend(UrbProxy.prototype, Proxy.prototype);
 /** @lends UrbProxy.prototype */
 extend(UrbProxy.prototype, {
   /**
+   * Check whether we need to do 
+   *
    * @params {Object} event {@link Event}
    */
   onEvent: function (event) {
-    // pass
+    this.notifyProxyListeners(event);
+  },
+  deviceAddedListener: function () {
+    if (!this._deviceAddedListener) {
+      this._deviceAddedListener = new Listener(
+        'urb/deviceAdded', curry(this.onDeviceAdded, this));
+    }
+    return this._deviceAddedListener;
+  },
+  deviceRemovedListener: function () {
+    if (!this._deviceRemovedListener) {
+      this._deviceRemovedListener = new Listener(
+        'urb/deviceRemoved', curry(this.onDeviceRemoved, this));
+    }
+    return this._deviceRemovedListener;
+  },
+  deviceProxyListener: function (device) {
+    if (!this._deviceProxyListeners[device.id()]) {
+      this._deviceProxyListeners[device.id()] = new Listener(
+          new RegExp(device.id()), curry(device.onEvent, device));
+    }
+    return this._deviceProxyListeners[device.id()]
+  },
+  /**
+   * Event handler for Device events. Builds a DeviceProxy, notifies listeners.
+   * 
+   * Also makes sure that further events from the remote connection are
+   * forwarded to the DeviceProxy.
+   *  
+   * @param {Object} device A serialized Device. {@link Device#toDict}
+   */
+  onDeviceAdded: function (event) {
+    var device = event.data;
+    var proxy = new DeviceProxy(device.kind, 
+                                device.name,
+                                device.properties,
+                                this._connection);
+    this.addDevice(proxy);
+    this.addProxyListener(this.deviceProxyListener(proxy));
+  },
+  onDeviceRemoved: function (event) {
+    var device = event.data;
+    var proxy = new DeviceProxy(device.kind, 
+                                device.name,
+                                device.properties,
+                                this);
+    this.removeProxyListener(this.deviceProxyListener(proxy));
+    this.removeDevice(proxy);
   }
 });
 
@@ -437,7 +603,7 @@ extend(UrbProxy.prototype, {
  */
 var ApiClient = function () {
   Evented.apply(this, arguments);
-  this._urb = null;
+  this.urb = null;
   this.transport = null;
 };
 inherit(ApiClient, Evented);
@@ -480,36 +646,9 @@ extend(ApiClient.prototype, {
    */
   onUrb: function (urb) {
     var proxy = new UrbProxy(urb.kind, urb.name, this);
-    this._urbs[proxy.id()] = proxy;
-    this.addListener(new Listener(new RegExp(proxy.id()),
-                                  curry(proxy.onEvent, proxy)));
+    this.urb = proxy;
+    this.addListener(this.urbListener(proxy));
     this.notifyListeners({topic: ['client/urb'],
-                          data: proxy.id()});
-  },
-  /**
-   * Event handler for Device events. Builds a DeviceProxy, notifies listeners.
-   * 
-   * Also makes sure that further events from the remote ApiServer are
-   * forwarded to the DeviceProxy.
-   *  
-   * TODO(termie): I'd prefer for us to figure out the urb from somewhere
-   *               that isn't in the device because in other circumstances
-   *               there is no reason why the device would know which urb is
-   *               holding on to it. This is easily remedied if we make things
-   *               one urb per client but I am expecting to do access control
-   *               at the urb level rather than the client level.
-   *
-   * @param {Object} device A serialized Device. {@link Device#toDict}
-   */
-  onDevice: function (device) {
-    var proxy = new DeviceProxy(device.kind, 
-                                device.name,
-                                device.properties,
-                                this);
-    this._urbs[device.urb].addDevice(DeviceProxy);
-    this.addListener(new Listener(new RegExp(proxy.id()),
-                                  curry(proxy.onEvent, proxy)));
-    this.notifyListeners({topic: ['client/device'],
                           data: proxy.id()});
   },
   /**
@@ -536,6 +675,16 @@ extend(ApiClient.prototype, {
     } else if (message.kind == 'event') {
       this.onEvent(message.data);
     }
+  },
+  urbListener: function (urb) {
+    if (!this._urbListener) {
+      this._urbListener = new Listener(
+          new RegExp(urb.id()), curry(urb.notifyProxyListeners, urb));
+    }
+    return this._urbListener;
+  },
+  send: function (message) {
+    this.transport.send(message);
   }
 });
 
@@ -546,12 +695,12 @@ extend(ApiClient.prototype, {
  * @class ApiServer provides access to Urbs and their Devices
  * @extends Evented
  */
-var ApiServer = function () {
-  Evented.apply(this, arguments);
+var ApiServer = function (kind, name, urb) {
+  Evented.call(this, kind, name);
   this._clients = [];
-  this._urbs = [];
+  this.urb = urb;
   this.transport = null;
-  this.addListener(this.serverListener());
+  this.urb.addListener(this.urbListener());
 };
 inherit(ApiServer, Evented);
 /** @lends ApiServer.prototype */
@@ -566,32 +715,13 @@ extend(ApiServer.prototype, {
     this.transport.listen(this);
   },
   /**
-   * Add an Urb to the list of Urbs brokered by the ApiServer.
-   *
-   * Notify existing clients of the new Urb and all of its Devices.
-   *
-   * @param {Urb} urb An Urb.
-   */
-  addUrb: function (urb) {
-    urb.addListener(this.urbListener());
-    this._urbs.push(urb);
-    this.notifyClients({kind: 'urb',
-                        data: urb.toDict()});
-    
-    var devices = urb.devices();
-    for (var i in devices) {
-      this.notifyClients({kind: 'device',
-                          data: devices[i].toDict()});
-    }
-  },
-  /**
    * Notifies listeners of the ApiServer on events from Urbs.
    * @return {Listener} A listener singleton for events from Urbs 
    */
   urbListener: function () {
     if (this._urbListener === undefined) {
       var self = this;
-      this._urbListener = new Listener(/.*/, curry(this.notifyListeners, this));
+      this._urbListener = new Listener(/.*/, curry(this.onEvent, this));
     }
     return this._urbListener; 
   },
@@ -599,13 +729,6 @@ extend(ApiServer.prototype, {
    * Notifies clients on events from the ApiServer.
    * @return {Listener} A listener singleton for events from the ApiServer 
    */
-  serverListener: function () {
-    if (this._serverListener === undefined) {
-      var self = this;
-      this._serverListener = new Listener(/.*/, curry(this.onEvent, this));
-    }
-    return this._serverListener; 
-  },
   /**
    * Notify connected clients
    *
@@ -622,6 +745,17 @@ extend(ApiServer.prototype, {
    * @param {ApiClientProxy} client A Proxy for the remote ApiClient
    */
   onClientConnect: function (client) {
+    // Send over current state
+    client.send({kind: 'urb',
+                 data: this.urb.toDict()});
+    var devices = this.urb.devices()
+    for (var d in devices) {
+      client.send({kind: 'event',
+                   data: {topic: [this.urb.id(),
+                                  'urb/deviceAdded'],
+                          data: devices[d].toDict()}
+                   });
+    }
     this._clients.push(client);
     this.notifyListeners({topic: ['server/clientConnect'],
                           data: client.id()});
@@ -636,8 +770,8 @@ extend(ApiServer.prototype, {
    */
   onClientMessage: function (message, client) {
     if (message.kind == 'rpc') {
-      this.onRpc(message.data, client);
       this.notifyListeners({topic: ['server/rpc'], data: message.data});
+      this.onRpc(message.data, client);
     }
   },
   /**
@@ -666,12 +800,10 @@ extend(ApiServer.prototype, {
    * @param {ApiClientProxy} client A Proxy for a remote ApiClient.
    */
   onRpc: function (rpc, client) {
-    for (var u in this._urbs) {
-      var devices = this._urbs[u].devices();
-      for (var d in devices) {
-        if (rpc.id == devices[d].id()) {
-          devices[d][rpc.method].apply(devices[d], rpc.arguments);
-        }
+    var devices = this.urb.devices();
+    for (var d in devices) {
+      if (rpc.id == devices[d].id()) {
+        devices[d][rpc.method].apply(devices[d], rpc.args);
       }
     }
   },
@@ -734,7 +866,7 @@ extend(DeviceServer.prototype, {
                                   curry(proxy.onEvent, proxy)));
     this._clients[client.id()].push(proxy);
     this.urb.addDevice(proxy);
-    this.notifyListeners({topic: ['deviceserver/device'],
+    this.notifyListeners({topic: ['deviceserver/deviceAdded'],
                           data: proxy.id()});
   },
   onEvent: function (event) {
@@ -754,13 +886,37 @@ var ExampleDevice = function (name, properties) {
 };
 inherit(ExampleDevice, Device);
 
+/** Transport implementations */
 
-
-
-
-
-
-
+var DirectClientTransport = function (serverTransport) {
+  ClientTransport.call(this)
+  this.serverTransport = serverTransport;
+  this._client = null;
+}
+inherit(DirectClientTransport, ClientTransport);
+extend(DirectClientTransport.prototype, {
+  connect: function (callbackObj) {
+    ClientTransport.prototype.connect.call(this, callbackObj);
+    this.serverTransport.onClientConnect(this._transportClient());
+    this.onConnect();
+  },
+  disconnect: function () {
+    this.serverTransport.onClientDisconnect(this._transportClient());
+    this.onDisconnect();
+  },
+  send: function (message) {
+    this.serverTransport.onClientMessage(this.serializeMessage(message),
+                                         this._transportClient());
+  },
+  _transportClient: function () {
+    if (!this._client) {
+      this._client = {id: function () { return 'client/direct'; },
+                      send: curry(this.onMessage, this)};
+    }
+    return this._client
+  },
+  parseMessage: function (message) { return message; },
+});
 
 
 
@@ -793,11 +949,14 @@ exports.clone = clone;
 
 exports.Evented = Evented;
 exports.Listener = Listener;
+exports.ClientTransport = ClientTransport;
+exports.ServerTransport = ServerTransport;
 
 exports.Device = Device;
 exports.Urb = Urb;
 
 exports.ExampleDevice = ExampleDevice;
+exports.DirectClientTransport = DirectClientTransport;
 
 exports.ApiServer = ApiServer;
 //exports.WebServer = WebServer;

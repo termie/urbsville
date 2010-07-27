@@ -34,7 +34,7 @@ DeviceTestCase.prototype.extend({
     dev.addListener(listener);
     
     
-    listener.expects().match(['kind/name', 'property/foo']).andReturn(true);
+    listener.expects().match(['kind/name', 'property/changed']).andReturn(true);
     listener.expects().send(jsmock.isA(Object));
 
     dev.setProperty('foo', 'bla');
