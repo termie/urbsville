@@ -198,17 +198,26 @@ Proxy.prototype = {
 
 
 /**
- * @class Connection interface. **For documentation purposes only.**
- *
- * Do not instantiate this interface.
+ * @class Connection knows how to send.
  */
-var Connection = function () { };
+var Connection = function (id, transport) {
+  this._id = id
+  this.transport = transport;
+};
 Connection.prototype = {
+  id: function () {
+    return this._id;
+  },
   /**
    * Send an object over the wire.
    * @param {Object} obj A simple event or rpc object.
    */
-  send: function (obj) { }
+  send: function (obj) {
+    this.transport.send(this.serializeMessage(obj));
+  },
+  serializeMessage: function (obj) {
+    return JSON.stringify(obj);
+  }
 }
 
 
@@ -259,12 +268,15 @@ ServerTransport.prototype = {
     this._callbackObj = callbackObj;
   },
   onClientConnect: function (client) {
+    var client = this.getClient(client);
     this._callbackObj.onClientConnect.call(this._callbackObj, client, this);
   },
   onClientDisconnect: function (client) {
+    var client = this.getClient(client);
     this._callbackObj.onClientDisconnect.call(this._callbackObj, client, this);
   },
   onClientMessage: function (message, client) {
+    var client = this.getClient(client);
     var parsed = this.parseMessage(message);
     this._callbackObj.onClientMessage.call(
         this._callbackObj, parsed, client, this);
@@ -274,7 +286,10 @@ ServerTransport.prototype = {
   },
   serializeMessage: function (message) {
     return JSON.stringify(message);
-  }
+  },
+  getClient: function (obj) {
+    return obj;
+  },
 };
 
 
@@ -1027,6 +1042,7 @@ exports.clone = clone;
 
 exports.Evented = Evented;
 exports.Listener = Listener;
+exports.Connection = Connection;
 exports.ClientTransport = ClientTransport;
 exports.ServerTransport = ServerTransport;
 

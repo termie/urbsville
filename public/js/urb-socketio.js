@@ -1,7 +1,6 @@
 var SocketIoClientTransport = function (host, options) {
   ClientTransport.call(this);
   this._socket = new io.Socket(host, options);
-  this._callbacks = null;
 };
 inherit(SocketIoClientTransport, ClientTransport);
 extend(SocketIoClientTransport.prototype, {

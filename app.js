@@ -35,21 +35,27 @@ get('/', function () {
 run(8000);
 
 var dev = new urb.ExampleDevice('example1');
-var hub = new urb.Urb('Urb', 'example2');
+var hub = new urb.Urb('Urb', 'hub');
 hub.addDevice(dev);
 
-var ws = new urb.ApiServer('ApiServer', 'example3', hub);
+var socketioApiServer = new urb.ApiServer('ApiServer', 'socketio', hub);
+var socketioTransport = new urb_node.SocketIoServerTransport(
+    8001, {transports: ['websocket']});
 
-var transport = new urb_node.SocketIoServerTransport(8001, {transports: ['websocket']});
+var tcpApiServer = new urb.ApiServer('ApiServer', 'tcp', hub);
+var tcpTransport = new urb_node.TcpServerTransport(9001, '127.0.0.1');
 
-ws.addListener(new urb.Listener(/.*/, function (event) { 
-    sys.puts('ws ' + event.data); }));
+socketioApiServer.addListener(new urb.Listener(/.*/, function (event) { 
+    sys.puts('socketio ' + sys.inspect(event)); }));
+tcpApiServer.addListener(new urb.Listener(/.*/, function (event) { 
+    sys.puts('tcp ' + sys.inspect(event)); }));
 hub.addListener(new urb.Listener(/.*/, function (event) {
-    sys.puts('hub ' + event.data); }));
+    sys.puts('hub ' + sys.inspect(event)); }));
 dev.addListener(new urb.Listener(/.*/, function (event) {
-    sys.puts('dev ' + event.data); }));
+    sys.puts('dev ' + sys.inspect(event)); }));
 
-ws.listen(transport);
+socketioApiServer.listen(socketioTransport);
+tcpApiServer.listen(tcpTransport);
 
 setInterval(function () {
     if (dev.getProperty('state')) {
@@ -59,4 +65,4 @@ setInterval(function () {
       sys.puts('toggle -> 1');
       dev.setProperty('state', 1);
     }
-}, 2000);
+}, 10000);
