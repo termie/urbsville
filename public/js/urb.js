@@ -424,17 +424,15 @@ extend(Device.prototype, {
   },
   getProperty: function (property) {
     if (this._properties[property] === undefined) {
-      return;
       // TODO(termie): do something about errors
-      //throw 'not a valid property: ' + property;
+      throw 'not a valid property: ' + property;
     }
     return this._properties[property];
   },
   setProperty: function (property, value) {
     if (this._properties[property] === undefined) {
-      return;
       // TODO(termie): do something about errors
-      //throw 'not a valid property: ' + property;
+      throw 'not a valid property: ' + property;
     }
     data = {}
     data[property] = value;
