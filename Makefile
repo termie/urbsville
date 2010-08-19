@@ -1,7 +1,7 @@
 jsl=jsl
 jsdoc=tools/jsdoc-toolkit
 
-build: third_party/node-unittest/README.rst third_party/node_mDNS/binding.node public/js/socket.io.js
+build: third_party/node-unittest/README.rst third_party/node_mDNS/binding.node public/js/socket.io.js public/js/jquery.js
 
 third_party/node_mDNS/binding.node: 
 	cd third_party/node_mDNS && node-waf configure build
@@ -11,6 +11,12 @@ public/js/socket.io.js: third_party/Socket.IO/socket.io.js
 
 third_party/Socket.IO/socket.io.js:
 	cd third_party/Socket.IO && node build.js
+
+public/js/jquery.js: third_party/jquery/dist/jquery.js
+	ln -f third_party/jquery/dist/jquery.js public/js
+
+third_party/jquery/dist/jquery.js:
+	cd third_party/jquery && make
 
 # this is just a target to make sure that we have checked out submodules
 third_party/node-unittest/README.rst:
