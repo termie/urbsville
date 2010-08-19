@@ -1,10 +1,20 @@
-<h1>Hey</h1>
-
+<h1>Device</h1>
+<script src="/public/js/browser-device.js"></script>
+<div class="bigdevice">
+  Click To Toggle Colors
+</div>
 <script>
-  var client = new ApiClient('ApiClient', 'test1');
-  var transport = new SocketIoClientTransport('localhost', {port: 8001});
+  var rand = Math.floor(Math.random()*10000000);
+  var dev = new BrowserDevice(rand.toString());
+  var client = new DeviceClient('ApiClient', 'device1', dev);
+  var transport = new SocketIoClientTransport('localhost', {port: 8002});
   
   client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
   client.connect(transport);
-
+  
+  $('.bigdevice').toggle(function () {
+    dev.setProperty('bgcolor', '#F00');
+  }, function () {
+    dev.setProperty('bgcolor', '#0F0');
+  });
 </script>

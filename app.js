@@ -32,11 +32,14 @@ get('/', function () {
     locals: {}
   });
 });
+get('/admin', function () {
+  this.render('admin.html.ejs', {
+    locals: {}
+  });
+});
 run(8000);
 
-var dev = new urb.ExampleDevice('example1');
 var hub = new urb.Urb('Urb', 'hub');
-hub.addDevice(dev);
 
 var socketioApiServer = new urb.ApiServer('ApiServer', 'socketio', hub);
 var socketioTransport = new urb_node.SocketIoServerTransport(
@@ -45,24 +48,31 @@ var socketioTransport = new urb_node.SocketIoServerTransport(
 var tcpApiServer = new urb.ApiServer('ApiServer', 'tcp', hub);
 var tcpTransport = new urb_node.TcpServerTransport(9001, '127.0.0.1');
 
+var socketioDeviceServer = new urb.DeviceServer('DeviceServer',
+                                                'socketio',
+                                                hub);
+var socketioDeviceTransport = new urb_node.SocketIoServerTransport(
+    8002, {transports: ['websocket']});
+
+
+
 socketioApiServer.addListener(new urb.Listener(/.*/, function (event) { 
     sys.puts('socketio ' + sys.inspect(event)); }));
 tcpApiServer.addListener(new urb.Listener(/.*/, function (event) { 
     sys.puts('tcp ' + sys.inspect(event)); }));
 hub.addListener(new urb.Listener(/.*/, function (event) {
     sys.puts('hub ' + sys.inspect(event)); }));
-dev.addListener(new urb.Listener(/.*/, function (event) {
-    sys.puts('dev ' + sys.inspect(event)); }));
 
 socketioApiServer.listen(socketioTransport);
 tcpApiServer.listen(tcpTransport);
+socketioDeviceServer.listen(socketioDeviceTransport);
 
-setInterval(function () {
-    if (dev.getProperty('state')) {
-      sys.puts('toggle -> 0');
-      dev.setProperty('state', 0);
-    } else {
-      sys.puts('toggle -> 1');
-      dev.setProperty('state', 1);
-    }
-}, 10000);
+//setInterval(function () {
+//    if (dev.getProperty('state')) {
+//      sys.puts('toggle -> 0');
+//      dev.setProperty('state', 0);
+//    } else {
+//      sys.puts('toggle -> 1');
+//      dev.setProperty('state', 1);
+//    }
+//}, 10000);

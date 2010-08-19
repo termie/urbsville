@@ -1,0 +1,14 @@
+body {
+}
+
+.bigdevice {
+  height: 500px;
+  border: 2px solid black;
+}
+
+.device {
+  display: inline-block;
+  height: 50px;
+  width: 300px;
+  text-align: center;
+}

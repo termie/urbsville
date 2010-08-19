@@ -424,18 +424,22 @@ extend(Device.prototype, {
   },
   getProperty: function (property) {
     if (this._properties[property] === undefined) {
-      throw 'not a valid property: ' + property;
+      return;
+      // TODO(termie): do something about errors
+      //throw 'not a valid property: ' + property;
     }
     return this._properties[property];
   },
   setProperty: function (property, value) {
     if (this._properties[property] === undefined) {
-      throw 'not a valid property: ' + property;
+      return;
+      // TODO(termie): do something about errors
+      //throw 'not a valid property: ' + property;
     }
     data = {}
     data[property] = value;
     this._properties[property] = value;
-    var event = {topic: ['property/changed'],
+    var event = {topic: ['device/propertyChanged', 'property/' + property],
                  data: data
                  };
     this.notifyListeners(event);
@@ -454,6 +458,14 @@ inherit(Urb, Evented);
 /** @lends Urb.prototype */
 extend(Urb.prototype, {
   devices: function () { return this._devices; },
+  device: function (id) {
+    var devices = this.devices();
+    for (var i in devices) {
+      if (devices[i].id() == id) {
+        return devices[i];
+      } 
+    }
+  }, 
   addDevice: function (device) {
     this._devices.push(device);
     
@@ -507,6 +519,7 @@ extend(Urb.prototype, {
 var DeviceProxy = function (kind, name, properties, connection) {
   Device.call(this, kind, name, properties);
   Proxy.call(this, connection);
+  this.connectionId = connection.id();
   this.addProxyListener(this.propertyListener());
 };
 inherit(DeviceProxy, Device);
@@ -516,7 +529,8 @@ extend(DeviceProxy.prototype, {
   propertyListener: function () {
     if (!this._propertyListener) {
       this._propertyListener = new Listener(
-        new RegExp('property/changed'), curry(this.onPropertyChanged, this));
+        new RegExp('device/propertyChanged'),
+        curry(this.onPropertyChanged, this));
     }
     return this._propertyListener;
   },
