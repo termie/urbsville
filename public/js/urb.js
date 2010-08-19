@@ -233,6 +233,9 @@ ClientTransport.prototype = {
   connect: function (callbackObj) {
     this._callbackObj = callbackObj;
   },
+  close: function () {
+    // not implemented
+  },
   onConnect: function () {
     this._callbackObj.onConnect.call(this._callbackObj, this);
   },
@@ -267,6 +270,9 @@ ServerTransport.prototype = {
   listen: function (callbackObj) {
     this._callbackObj = callbackObj;
   },
+  close: function () {
+    // not implemented
+  },
   onClientConnect: function (client) {
     var client = this.getClient(client);
     this._callbackObj.onClientConnect.call(this._callbackObj, client, this);
@@ -292,6 +298,32 @@ ServerTransport.prototype = {
   },
 };
 
+var StringProtocol = function (callback) {
+  this._buffer = [];
+  this._callback = callback;
+  this.maxSize = 1024;
+  this.delimiter = "\u0000";
+}
+StringProtocol.prototype = {
+  onData: function (data) {
+    var bufferLength = this._buffer.length;
+    for (var i in data) {
+      if (bufferLength >= this.maxSize) {
+        throw "Buffer size limit reached";
+      }
+      if (data[i] == this.delimiter) {
+        this.flush();
+        bufferLength = 0;
+      } else {
+        bufferLength = this._buffer.push(data[i]);
+      }
+    }
+  },
+  flush: function () {
+    this._callback(this._buffer.join(""));
+    this._buffer = [];
+  }
+}
 
 
 /** Data types */
@@ -635,8 +667,8 @@ extend(ApiClient.prototype, {
     this.transport = transport;
     this.transport.connect(this)
   },
-  disconnect: function () {
-    this.transport.disconnect();
+  close: function () {
+    this.transport.close();
     this.transport = null;
   },
   /**
@@ -727,8 +759,8 @@ extend(DeviceClient.prototype, {
     this.transport = transport;
     this.transport.connect(this)
   },
-  disconnect: function () {
-    this.transport.disconnect();
+  close: function () {
+    this.transport.close();
     this.transport = null;
   },
   /**
@@ -812,6 +844,12 @@ extend(ApiServer.prototype, {
     this.transport = transport;
     this.transport.listen(this);
   },
+  close: function () {
+    if (this.transport) {
+      this.transport.close();
+      this.transport = null;
+    }
+  },
   /**
    * Notifies listeners of the ApiServer on events from Urbs.
    * @return {Listener} A listener singleton for events from Urbs 
@@ -875,7 +913,7 @@ extend(ApiServer.prototype, {
    */
   onClientDisconnect: function (client) {
     for (var i in this._clients) {
-      if (this._clients[i] == client) {
+      if (this._clients[i] === client) {
         this._clients.splice(i, 1);
         this.notifyListeners({topic: ['server/clientDisconnect'],
                               data: client.id()});
@@ -928,6 +966,12 @@ extend(DeviceServer.prototype, {
   listen: function(transport) {
     this.transport = transport;
     this.transport.listen(this);
+  },
+  close: function () {
+    if (this.transport) {
+      this.transport.close();
+      this.transport = null;
+    }
   },
   onClientConnect: function (client) {
     this._clients[client.id()] = [];
@@ -993,7 +1037,7 @@ extend(DirectClientTransport.prototype, {
     this.serverTransport.onClientConnect(this._transportClient());
     this.onConnect();
   },
-  disconnect: function () {
+  close: function () {
     this.serverTransport.onClientDisconnect(this._transportClient());
     this.onDisconnect();
   },
@@ -1045,6 +1089,7 @@ exports.Listener = Listener;
 exports.Connection = Connection;
 exports.ClientTransport = ClientTransport;
 exports.ServerTransport = ServerTransport;
+exports.StringProtocol = StringProtocol;
 
 exports.Device = Device;
 exports.Urb = Urb;

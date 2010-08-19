@@ -4,12 +4,13 @@ var jsmock = require('jsmock');
 var unittest = require('unittest');
 
 var urb = require('urb');
+var urb_node = require('urb-node');
 
-var IntegrationTestCase = function () {
+var TcpTransportCase = function () {
   unittest.TestCase.apply(this, arguments);
 };
-sys.inherits(IntegrationTestCase, unittest.TestCase);
-IntegrationTestCase.prototype.extend({
+sys.inherits(TcpTransportCase, unittest.TestCase);
+TcpTransportCase.prototype.extend({
   setUp: function () {
     this.mock = new jsmock.MockControl();
     this.urbber = new urb.Urb('urb', 'urb1');
@@ -22,20 +23,18 @@ IntegrationTestCase.prototype.extend({
     this.deviceClient = new urb.DeviceClient(
         'deviceclient', 'test', this.device2);
 
-    this.apiServerTransport = new urb.ServerTransport();
-    this.deviceServerTransport = new urb.ServerTransport();
-    this.apiClientTransport = new urb.DirectClientTransport(
-        this.apiServerTransport);
-    this.deviceClientTransport = new urb.DirectClientTransport(
-        this.deviceServerTransport);
+    this.apiServerTransport = new urb_node.TcpServerTransport(10001,
+                                                             'localhost');
+    this.deviceServerTransport = new urb_node.TcpServerTransport(10002,
+                                                                 'localhost');
+    this.apiClientTransport = new urb_node.TcpClientTransport(10001,
+                                                              'localhost');
+    this.deviceClientTransport = new urb_node.TcpClientTransport(10002,
+                                                                 'localhost');
   },
   tearDown: function () {
     this.mock.verify();
-    try {
-      this.apiServer.close();
-    } catch (e) {
-
-    }
+    this.apiServer.close();
     this.deviceServer.close();
   },
   testBasic: function () {
@@ -95,4 +94,4 @@ IntegrationTestCase.prototype.extend({
     this.assertEqual(example2.getProperty('state'), 0);
   }
 });
-exports.IntegrationTestCase = IntegrationTestCase;
+exports.TcpTransportCase = TcpTransportCase;

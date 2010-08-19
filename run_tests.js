@@ -3,6 +3,7 @@ require.paths.unshift('./third_party/node_mDNS/')
 require.paths.unshift('./third_party/node-unittest/lib')
 require.paths.unshift('./third_party/node-jsmock/lib')
 require.paths.unshift('./public/js');
+require.paths.unshift('./third_party/Socket.IO-node/lib');
 require.paths.unshift('./lib')
 require.paths.unshift('./tests')
 
@@ -13,6 +14,7 @@ var device_unittest = require('device_unittest');
 var deviceserver_unittest = require('deviceserver_unittest');
 var evented_unittest = require('evented_unittest');
 var integration_test = require('integration_test');
+//var tcptransport_test = require('tcptransport_test');
 
 unittest.run([
   core_unittest,
@@ -20,4 +22,5 @@ unittest.run([
   deviceserver_unittest,
   evented_unittest,
   integration_test,
+  //tcptransport_test,
 ]);
