@@ -1,16 +1,17 @@
-require.paths.unshift('./third_party/express/lib/');
+require.paths.unshift('./third_party/node-static/lib/');
+require.paths.unshift('./third_party/node.routes.js/');
 require.paths.unshift('./third_party/node_mDNS/');
 require.paths.unshift('./public/js');
-require.paths.unshift('./third_party/Socket.IO-node/lib');
+require.paths.unshift('./third_party/Socket.IO-node/lib/');
 require.paths.unshift('./lib');
-require('express');
-require('express/plugins');
 var http = require('http');
 var sys = require('sys');
 var urb = require('urb');
 var urb_node = require('urb-node');
 // should import the one from third_party
 var io = require('socket.io');
+var static = require('static');
+var routes = require('routes');
 
 // var Class imported by require('express')
 
@@ -20,6 +21,27 @@ var io = require('socket.io');
  * 2. Set up a web service to publish data about these Devices
  * 3. Announce itself on the local network
  */
+
+var fileServer = static.Server('./public');
+
+function render_admin(request, response) {}
+function render_device(request, response) {}
+function render_static(request, response, file) {
+  fileServer.serveFile(file, request, response);
+}
+
+var urls = [
+  ['^/admin$', render_admin],
+  ['^/$', render_device],
+  ['^/public/(.*)$', render_static]
+];
+
+
+var webServer = http.createServer(function (request, response) {
+  request.addListener('end', function () {
+    routes.route(request, response, urls);
+  });
+});
 
 
 configure(function(){
