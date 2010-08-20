@@ -16,3 +16,6 @@
 [submodule "third_party/jquery"]
 	path = third_party/jquery
 	url = git://github.com/jquery/jquery.git
+[submodule "third_party/Socket.IO"]
+	path = third_party/Socket.IO
+	url = http://github.com/LearnBoost/Socket.IO.git
