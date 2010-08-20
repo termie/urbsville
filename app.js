@@ -1,16 +1,16 @@
 require.paths.unshift('./third_party/node-static/lib/');
 require.paths.unshift('./third_party/node.routes.js/');
 require.paths.unshift('./third_party/node_mDNS/');
+require.paths.unshift('./third_party/');
 require.paths.unshift('./public/js');
-require.paths.unshift('./third_party/Socket.IO-node/lib/');
 require.paths.unshift('./lib');
 var http = require('http');
 var sys = require('sys');
 var urb = require('urb');
 var urb_node = require('urb-node');
 // should import the one from third_party
-var io = require('socket.io');
-var static = require('static');
+var io = require('Socket.IO-node');
+var static = require('node-static');
 var routes = require('routes');
 
 // var Class imported by require('express')
@@ -23,9 +23,15 @@ var routes = require('routes');
  */
 
 var fileServer = static.Server('./public');
+var viewServer = static.Server('./views');
 
-function render_admin(request, response) {}
-function render_device(request, response) {}
+function render_admin(request, response) {
+  viewServer.serveFile('admin.html', request, response);
+}
+function render_device(request, response) {
+  viewServer.serveFile('device.html', request, response);
+}
+
 function render_static(request, response, file) {
   fileServer.serveFile(file, request, response);
 }
@@ -41,25 +47,7 @@ var webServer = http.createServer(function (request, response) {
   request.addListener('end', function () {
     routes.route(request, response, urls);
   });
-});
-
-
-configure(function(){
-  set('root', __dirname);
-  use(Static);
-});
-
-get('/', function () {
-  this.render('index.html.ejs', {
-    locals: {}
-  });
-});
-get('/admin', function () {
-  this.render('admin.html.ejs', {
-    locals: {}
-  });
-});
-run(8000);
+}).listen(8000);
 
 var hub = new urb.Urb('Urb', 'hub');
 
