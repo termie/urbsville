@@ -16,9 +16,6 @@
 [submodule "third_party/Socket.IO"]
 	path = third_party/Socket.IO
 	url = http://github.com/LearnBoost/Socket.IO.git
-[submodule "third_party/express"]
-	path = third_party/express
-	url = http://github.com/visionmedia/express.git
 [submodule "third_party/node-static"]
 	path = third_party/node-static
 	url = http://github.com/cloudhead/node-static.git
