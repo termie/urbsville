@@ -44,6 +44,16 @@ a, a:visited {
     color: #fff;
 }
 
+div.buttons {
+    text-align: center;
+}
+
+div.buttons button, div.buttons a.btn {
+    font-size: 1.5em;
+    padding: 0.2em;
+    margin: 0 1em;
+}
+
 #control, #outro {
     display: none;
 }
@@ -90,7 +100,8 @@ a, a:visited {
     margin-bottom: 18px;
     position: relative;
     background: #333;
-    height: 18px;
+    margin: 1.5em;
+    height: 9px;
     width: 255px;
 }
 
@@ -110,9 +121,10 @@ a, a:visited {
     position: absolute;
     background: green;
     display: block;
-    height: 22px;
-    width: 15px;
-    top: -3px;
+    margin-left: -9px; /* width/2 */
+    height: 18px;
+    width: 18px;
+    top: -6px;
 }
 
 .bigdevice {

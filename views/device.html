@@ -4,6 +4,7 @@
 <head>
     <title>Urbsville</title>
     <link rel="stylesheet" media="all" href="/public/css/main.css" />
+    <meta name="viewport" content="width=device-width" />
 </head>
 <body>
     <div id="intro">
@@ -11,38 +12,102 @@
         <p>
             Want to control one of the lights?
         </p>
-        <button id="button-yes" disabled="disabled">Yes</button>
-        <a href="/" class="btn">No</a>
+        <div class="buttons">
+            <button id="button-yes" disabled="disabled">Yes</button>
+            <a href="/" class="btn">No</a>
+        </div>
     </div>
     <div id="control">
         <h1>You have access to light x</h1>
         <p>
             You can now control the brightness of the light for <span id="time-left">0:30</span>
         </p>
-        <div class="slider"></div>
+        <div class="slider">
+            <a href="#" class="ui-slider-handle"></a>
+        </div>
     </div>
     <div id="outro">
         <h1>Time's up!</h1>
         <p>
             Want to ask another question?
         </p>
-        <button id="button-again">Yes</button>
-        <a href="/" class="btn">No</a>
+        <div class="buttons">
+            <button id="button-again">Yes</button>
+            <a href="/" class="btn">No</a>
+        </div>
     </div>
     
     <script type="text/javascript" src="/public/js/jquery.js"></script>
-    <script type="text/javascript" src="/public/js/jquery-ui-slider.js"></script>
     <script type="text/javascript" src="/public/js/socket.io.js"></script>
     <script type="text/javascript">io.setPath('/public/js/');</script>
     <script type="text/javascript" src="/public/js/urb.js"></script>
     <script type="text/javascript" src="/public/js/urb-socketio.js"></script>
     <script type="text/javascript" src="/public/js/browser-device.js"></script>
     <script type="text/javascript">
+        if (!window.console) window.console = {};
+        if (!window.console.log) window.console.log = function() {};
+        
+        function startDrag(e) {
+            var width = el.offsetWidth;
+            var min = 0;
+            var max = 255;
+            
+        	if (e.type === 'touchstart') {
+        		el.onmousedown = null;
+        		el.ontouchmove = moveDrag;
+        		el.ontouchend = function () {
+        			el.ontouchmove = null;
+        			el.ontouchend = null;
+        			el.ontouchstart = startDrag; // necessary for Dolfin; this is a bug
+        		}
+        	} else {
+        		document.onmousemove = moveDrag;
+        		document.onmouseup = function () {
+        			document.onmousemove = null;
+        			document.onmouseup = null;
+        		}
+        	}
+            
+        	var pos = [el.offsetLeft, el.offsetTop];
+        	var origin = getCoors(e);
+            
+        	function moveDrag (e) {
+        		var currentPos = getCoors(e);
+        		var deltaX = currentPos[0] - origin[0];
+        		var deltaY = currentPos[1] - origin[1];
+        		var x = (pos[0] + deltaX);
+        		if (x >= min && x <= max) {
+        		    el.style.left = (pos[0] + deltaX) + 'px';
+        		    setColor((pos[0] + deltaX));
+        		}
+        		return false;
+        		/* cancels scrolling; Android 2.1 needs this ontouchstart, but that's a bug.
+        		iPhone and Android 2.2 allow it ontouchstart, but also ontouchmove
+        		Dolfin requires it ontouchmove */
+        	}
+
+        	function getCoors(e) {
+        		var coors = [];
+        		if (e.touches && e.touches.length) { 	// iPhone
+        			coors[0] = e.touches[0].clientX;
+        			coors[1] = e.touches[0].clientY;
+        		} else { 								// all others
+        			coors[0] = e.clientX;
+        			coors[1] = e.clientY;
+        		}
+        		return coors;
+        	}
+        	e.preventDefault();
+        }
+        
+        var el = $(".slider .ui-slider-handle").get(0);
+        el.onmousedown = el.ontouchstart = startDrag;        
+        
         var rand = Math.floor(Math.random()*10000000);
         var dev = new BrowserDevice(rand.toString());
         var client = new DeviceClient('ApiClient', 'device1', dev);
         var transport = new SocketIoClientTransport('localhost', {port: 8002});
-
+        
         client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
         client.connect(transport);
         
@@ -59,21 +124,13 @@
             return hex.join("").toUpperCase();
     	}
 
-    	function setColor() {
-    		var red = $(".slider").slider("value");
+    	function setColor(red) {
+    		//var red = $(".slider").slider("value");
+    		$("h1").html(red)
     		var green = 0, blue = 0;
     		var hex = rgbToHex(red, green, blue);
     		dev.setProperty("bgcolor", "#" + hex);
     	}
-        
-        $(".slider").slider({
-            orientation: "horizontal",
-			range: "min",
-			max: 255,
-			value: 0,
-			slide: setColor,
-			change: setColor
-        });
         
         $("#button-yes").attr("disabled", false);
         $("#button-yes").click(function () {
