@@ -28,6 +28,9 @@ var viewServer = new static.Server('./views');
 function render_admin(request, response) {
   viewServer.serveFile('admin.html', 200, {}, request, response);
 }
+function render_index(request, response) {
+  viewServer.serveFile('index.html', 200, {}, request, response);
+}
 function render_device(request, response) {
   viewServer.serveFile('device.html', 200, {}, request, response);
 }
@@ -38,7 +41,8 @@ function render_static(request, response, file) {
 
 var urls = [
   ['^/admin$', render_admin],
-  ['^/$', render_device],
+  ['^/30seconds$', render_device],
+  ['^/$', render_index],
   ['^/public/(.*)$', render_static]
 ];
 

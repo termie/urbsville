@@ -2,34 +2,102 @@
 "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html>
 <head>
-<script src="/public/js/jquery.js"></script>
-<script src="/public/js/socket.io.js"></script>
-<script>io.setPath('/public/js/');</script>
-<script src="/public/js/urb.js"></script>
-<script src="/public/js/urb-socketio.js"></script>
-<title>Urbsville</title>
-<link rel="stylesheet" media="all" href="/public/css/main.css" />
+    <title>Urbsville</title>
+    <link rel="stylesheet" media="all" href="/public/css/main.css" />
 </head>
 <body>
-<h1>Device</h1>
-<script src="/public/js/browser-device.js"></script>
-<div class="bigdevice">
-  Click To Toggle Colors
-</div>
-<script>
-  var rand = Math.floor(Math.random()*10000000);
-  var dev = new BrowserDevice(rand.toString());
-  var client = new DeviceClient('ApiClient', 'device1', dev);
-  var transport = new SocketIoClientTransport('localhost', {port: 8002});
-  
-  client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
-  client.connect(transport);
-  
-  $('.bigdevice').toggle(function () {
-    dev.setProperty('bgcolor', '#F00');
-  }, function () {
-    dev.setProperty('bgcolor', '#0F0');
-  });
-</script>
+    <div id="intro">
+        <h1>Welcome to Club x</h1>
+        <p>
+            Want to control one of the lights?
+        </p>
+        <button id="button-yes" disabled="disabled">Yes</button>
+        <a href="/" class="btn">No</a>
+    </div>
+    <div id="control">
+        <h1>You have access to light x</h1>
+        <p>
+            You can now control the brightness of the light for <span id="time-left">0:30</span>
+        </p>
+        <div class="slider"></div>
+    </div>
+    <div id="outro">
+        <h1>Time's up!</h1>
+        <p>
+            Want to ask another question?
+        </p>
+        <button id="button-again">Yes</button>
+        <a href="/" class="btn">No</a>
+    </div>
+    
+    <script type="text/javascript" src="/public/js/jquery.js"></script>
+    <script type="text/javascript" src="/public/js/jquery-ui-slider.js"></script>
+    <script type="text/javascript" src="/public/js/socket.io.js"></script>
+    <script type="text/javascript">io.setPath('/public/js/');</script>
+    <script type="text/javascript" src="/public/js/urb.js"></script>
+    <script type="text/javascript" src="/public/js/urb-socketio.js"></script>
+    <script type="text/javascript" src="/public/js/browser-device.js"></script>
+    <script type="text/javascript">
+        var rand = Math.floor(Math.random()*10000000);
+        var dev = new BrowserDevice(rand.toString());
+        var client = new DeviceClient('ApiClient', 'device1', dev);
+        var transport = new SocketIoClientTransport('localhost', {port: 8002});
+
+        client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
+        client.connect(transport);
+        
+        function rgbToHex(r, g, b) {
+            var hex = [
+                r.toString(16),
+                g.toString(16),
+                b.toString(16)
+            ];
+            $.each(hex, function (nr, val) {
+                if (val.length == 1)
+                	hex[nr] = "0" + val;
+            });
+            return hex.join("").toUpperCase();
+    	}
+
+    	function setColor() {
+    		var red = $(".slider").slider("value");
+    		var green = 0, blue = 0;
+    		var hex = rgbToHex(red, green, blue);
+    		dev.setProperty("bgcolor", "#" + hex);
+    	}
+        
+        $(".slider").slider({
+            orientation: "horizontal",
+			range: "min",
+			max: 255,
+			value: 0,
+			slide: setColor,
+			change: setColor
+        });
+        
+        $("#button-yes").attr("disabled", false);
+        $("#button-yes").click(function () {
+            $("#intro").hide();
+            $("#control").show();
+            var el = $("#time-left");
+            var seconds = 31;            
+            var interval = window.setInterval(function () {
+                seconds--;
+                if (seconds < 0) {
+                    window.clearInterval(interval);
+                    $("#control").hide();
+                    $("#outro").show();
+                }
+                else {
+                    el.html((seconds<10) ? "0:0" + seconds : "0:" + seconds);
+                }
+            }, 1000);
+        });
+        
+        $("#button-again").click(function () {
+            $("#outro").hide();
+            $("#intro").show();
+        });
+    </script>
 </body>
 </html>
