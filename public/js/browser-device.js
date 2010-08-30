@@ -15,6 +15,7 @@ extend(BrowserDevice.prototype, {
     return this._propertyListener;
   },
   onBgcolorChanged: function (event) {
+    //  console.log(event)
     var newColor = event.data.bgcolor;
     document.body.style.backgroundColor = newColor;
   }
