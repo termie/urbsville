@@ -19,7 +19,7 @@
 
 <script type="text/javascript">
   var client = new ApiClient('ApiClient', 'admin');
-  var transport = new SocketIoClientTransport('localhost', {port: 8000});
+  var transport = new SocketIoClientTransport('localhost', {port: 8001});
   
   client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
 
