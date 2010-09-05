@@ -9,7 +9,7 @@ function curry(fn, scope) {
   }
   return function() {
     var a = [];
-    for (var i in arguments) {
+    for (var i = 0, len = arguments.length; i<len; i++) {
       a.push(arguments[i]);
     }
     for (var j in args) {

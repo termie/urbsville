@@ -49,13 +49,13 @@ var urls = [
 
 var webServer = http.createServer(function (request, response) {
   routes.route(request, response, urls);
-}).listen(8000);
+});
 
 var hub = new urb.Urb('Urb', 'hub');
 
 var socketioApiServer = new urb.ApiServer('ApiServer', 'socketio', hub);
 var socketioTransport = new urb_node.SocketIoServerTransport(
-    8001, {transports: ['websocket']});
+    8001, null, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'jsonp-polling']});
 
 var tcpApiServer = new urb.ApiServer('ApiServer', 'tcp', hub);
 var tcpTransport = new urb_node.TcpServerTransport(9001, '127.0.0.1');
@@ -64,9 +64,7 @@ var socketioDeviceServer = new urb.DeviceServer('DeviceServer',
                                                 'socketio',
                                                 hub);
 var socketioDeviceTransport = new urb_node.SocketIoServerTransport(
-    8002, {transports: ['websocket']});
-
-
+    8000, webServer, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling']});
 
 socketioApiServer.addListener(new urb.Listener(/.*/, function (event) { 
     sys.puts('socketio ' + sys.inspect(event)); }));

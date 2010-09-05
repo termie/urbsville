@@ -1,5 +1,6 @@
 var SocketIoClientTransport = function (host, options) {
   ClientTransport.call(this);
+  options['transports'] = ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling'];
   this._socket = new io.Socket(host, options);
 };
 inherit(SocketIoClientTransport, ClientTransport);

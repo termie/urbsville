@@ -38,6 +38,7 @@
     </div>
     
     <script type="text/javascript" src="/public/js/jquery.js"></script>
+    <script type="text/javascript" src="/public/js/json.js"></script>
     <script type="text/javascript" src="/public/js/socket.io.js"></script>
     <script type="text/javascript">io.setPath('/public/js/');</script>
     <script type="text/javascript" src="/public/js/urb.js"></script>
@@ -52,13 +53,13 @@
             var min = 0;
             var max = 255;
             
-        	if (e.type === 'touchstart') {
+        	if (e.type === "touchstart") {
         		el.onmousedown = null;
         		el.ontouchmove = moveDrag;
         		el.ontouchend = function () {
         			el.ontouchmove = null;
         			el.ontouchend = null;
-        			el.ontouchstart = startDrag; // necessary for Dolfin; this is a bug
+        			el.ontouchstart = startDrag;
         		}
         	} else {
         		document.onmousemove = moveDrag;
@@ -81,9 +82,6 @@
         		    setColor((pos[0] + deltaX));
         		}
         		return false;
-        		/* cancels scrolling; Android 2.1 needs this ontouchstart, but that's a bug.
-        		iPhone and Android 2.2 allow it ontouchstart, but also ontouchmove
-        		Dolfin requires it ontouchmove */
         	}
 
         	function getCoors(e) {
@@ -104,10 +102,12 @@
         el.onmousedown = el.ontouchstart = startDrag;        
         
         var rand = Math.floor(Math.random()*10000000);
+        
         var dev = new BrowserDevice(rand.toString());
         var client = new DeviceClient('ApiClient', 'device1', dev);
-        var transport = new SocketIoClientTransport('localhost', {port: 8002});
+        var transport = new SocketIoClientTransport('localhost', {port: 8000});
         
+        client.addListener(new Listener(new RegExp('property/bgcolor'), function (evt) { console.log('color!') }));        
         client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
         client.connect(transport);
         
@@ -155,6 +155,8 @@
             $("#outro").hide();
             $("#intro").show();
         });
+        
+        //$.get("/admin", function (data) { alert(data)});
     </script>
 </body>
 </html>
