@@ -62,17 +62,17 @@ TcpTransportCase.prototype.extend({
     this.apiClient.connect(this.apiClientTransport);
     var example1 = this.apiClient.urb.devices()[0];
 
-    example1.setProperty('state', 0);
-    this.assertEqual(this.device1.getProperty('state'), 0);
-    this.assertEqual(example1.getProperty('state'), 0);
+    example1.set('state', 0);
+    this.assertEqual(this.device1.get('state'), 0);
+    this.assertEqual(example1.get('state'), 0);
 
-    example1.setProperty('state', 1);
-    this.assertEqual(this.device1.getProperty('state'), 1);
-    this.assertEqual(example1.getProperty('state'), 1);
+    example1.set('state', 1);
+    this.assertEqual(this.device1.get('state'), 1);
+    this.assertEqual(example1.get('state'), 1);
 
-    this.device1.setProperty('state', 0);
-    this.assertEqual(this.device1.getProperty('state'), 0);
-    this.assertEqual(example1.getProperty('state'), 0);
+    this.device1.set('state', 0);
+    this.assertEqual(this.device1.get('state'), 0);
+    this.assertEqual(example1.get('state'), 0);
   },
   testDeviceServerProperties: function () {
     this.apiServer.listen(this.apiServerTransport);
@@ -81,17 +81,17 @@ TcpTransportCase.prototype.extend({
     this.deviceClient.connect(this.deviceClientTransport);
     var example2 = this.apiClient.urb.devices()[0];
     
-    example2.setProperty('state', 0);
-    this.assertEqual(this.device2.getProperty('state'), 0);
-    this.assertEqual(example2.getProperty('state'), 0);
+    example2.set('state', 0);
+    this.assertEqual(this.device2.get('state'), 0);
+    this.assertEqual(example2.get('state'), 0);
 
-    example2.setProperty('state', 1);
-    this.assertEqual(this.device2.getProperty('state'), 1);
-    this.assertEqual(example2.getProperty('state'), 1);
+    example2.set('state', 1);
+    this.assertEqual(this.device2.get('state'), 1);
+    this.assertEqual(example2.get('state'), 1);
 
-    this.device2.setProperty('state', 0);
-    this.assertEqual(this.device2.getProperty('state'), 0);
-    this.assertEqual(example2.getProperty('state'), 0);
+    this.device2.set('state', 0);
+    this.assertEqual(this.device2.get('state'), 0);
+    this.assertEqual(example2.get('state'), 0);
   }
 });
 exports.TcpTransportCase = TcpTransportCase;

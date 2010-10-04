@@ -422,15 +422,21 @@ extend(Device.prototype, {
     dict.properties = this.properties();
     return dict;
   },
-  getProperty: function (property) {
+  get: function (property) {
     if (this._properties[property] === undefined) {
+      if (this['get_' + property]) {
+        return this['get_' + property].call(this);
+      }
       // TODO(termie): do something about errors
       throw 'not a valid property: ' + property;
     }
     return this._properties[property];
   },
-  setProperty: function (property, value) {
+  set: function (property, value) {
     if (this._properties[property] === undefined) {
+      if (this['set_' + property]) {
+        return this['set_' + property].call(this, value);
+      }
       // TODO(termie): do something about errors
       throw 'not a valid property: ' + property;
     }
@@ -541,27 +547,27 @@ extend(DeviceProxy.prototype, {
   },
   onPropertyChanged: function (event) {
     for (var i in event.data) {
-      this._setProperty(i, event.data[i]);
+      this._set(i, event.data[i]);
     }
   },
   /**
    * Actually change the internal represenation and notify listeners
-   * @see Device#setProperty
+   * @see Device#set
    * @private
    */
-  _setProperty: function () {
-    Device.prototype.setProperty.apply(this, arguments);
+  _set: function () {
+    Device.prototype.set.apply(this, arguments);
   },
   /**
-   * Sends a setProperty RPC to the remote device.
+   * Sends a set RPC to the remote device.
    *
    * Note that the property will not actually be set until the remote
    * device has acknowledged the RPC and set its own property.
    *
-   * @see Device#setProperty
+   * @see Device#set
    */
-  setProperty: function (property, value) {
-    this.rpc(this.id(), 'setProperty', [property, value]);
+  set: function (property, value) {
+    this.rpc(this.id(), 'set', [property, value]);
   }
 });
 

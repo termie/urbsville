@@ -29,9 +29,9 @@
                          + device.id
                          + '</div');
     $('#device' + device.name).toggle(function () {
-      client.urb.device(device.id).setProperty('bgcolor', "#000");
+      client.urb.device(device.id).set('bgcolor', "#000");
     }, function () {
-      client.urb.device(device.id).setProperty('bgcolor', "#FFF");
+      client.urb.device(device.id).set('bgcolor', "#FFF");
     });
   }));
 

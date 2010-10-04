@@ -27,14 +27,14 @@ DeviceServerTestCase.prototype.extend({
     server.onDevice(this.device.toDict(), this.fakeClient);
     this.assertEqual(this.urbber.devices().length, 1);
     
-    this.assertEqual(this.urbber.devices()[0].getProperty('state'), 0);
+    this.assertEqual(this.urbber.devices()[0].get('state'), 0);
     server.onClientMessage({kind: 'event',
                             data: {topic: [this.device.id(),
                                            'device/propertyChanged'],
                                    data: {'state': 1}
                                    }
                             }, this.fakeClient);
-    this.assertEqual(this.urbber.devices()[0].getProperty('state'), 1);
+    this.assertEqual(this.urbber.devices()[0].get('state'), 1);
 
     server.onClientDisconnect(this.fakeClient);
     this.assertEqual(this.urbber.devices().length, 0);

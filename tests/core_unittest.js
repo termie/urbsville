@@ -28,7 +28,7 @@ DeviceTestCase.prototype.extend({
     mockListener.expects().send(jsmock.isA(Object));
 
     dev.addListener(mockListener);
-    dev.setProperty('foo', 'baz');
+    dev.set('foo', 'baz');
     mock.verify();
   },
 });

@@ -25,11 +25,11 @@ DeviceTestCase.prototype.extend({
     var dev = new urb.Device('kind', 'name', {foo: 'bar', baz: 'baq'});
     var listener = this.mock.createMock(urb.Listener);
     
-    this.assertEqual(dev.getProperty('foo'), 'bar');
-    this.assertEqual(dev.getProperty('baz'), 'baq');
+    this.assertEqual(dev.get('foo'), 'bar');
+    this.assertEqual(dev.get('baz'), 'baq');
     
 
-    this.assertThrows(function () { dev.setProperty('not_there', 'foo')});
+    this.assertThrows(function () { dev.set('not_there', 'foo')});
 
     dev.addListener(listener);
     
@@ -39,9 +39,24 @@ DeviceTestCase.prototype.extend({
                               'property/foo']).andReturn(true);
     listener.expects().send(jsmock.isA(Object));
 
-    dev.setProperty('foo', 'bla');
+    dev.set('foo', 'bla');
     
-    this.assertEqual(dev.getProperty('foo'), 'bla');
+    this.assertEqual(dev.get('foo'), 'bla');
+  },
+  testDynamicProperties: function () {
+    var dev = new urb.Device('kind', 'name', {baz: 'baq'});
+    dev.get_foo = function () {
+      return this.get('baz');
+    }
+    dev.set_foo = function (value) {
+      return this.set('baz', value);
+    }
+    var listener = this.mock.createMock(urb.Listener);
+    
+    this.assertEqual(dev.get('foo'), 'baq');
+    dev.set('foo', 'bar');
+    this.assertEqual(dev.get('foo'), 'bar');
+    this.assertEqual(dev.get('baz'), 'bar');
   }
 });
 exports.DeviceTestCase = DeviceTestCase;
