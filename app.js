@@ -35,6 +35,10 @@ function render_device(request, response) {
   viewServer.serveFile('device.html', 200, {}, request, response);
 }
 
+function render_js3d(request, response) {
+  viewServer.serveFile('js3d.html', 200, {}, request, response);
+}
+
 function render_static(request, response, file) {
   fileServer.serveFile(file, 200, {}, request, response);
 }
@@ -42,6 +46,7 @@ function render_static(request, response, file) {
 var urls = [
   ['^/admin$', render_admin],
   ['^/30seconds$', render_device],
+  ['^/js3d$', render_js3d],
   ['^/$', render_index],
   ['^/public/(.*)$', render_static]
 ];

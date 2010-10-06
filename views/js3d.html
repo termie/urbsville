@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+<head>
+<script src="/public/js/jquery.js"></script>
+<script type="text/javascript" src="/public/js/json.js"></script>
+<script src="/public/js/socket.io.js"></script>
+<script>io.setPath('/public/js/');</script>
+<script src="/public/js/urb.js"></script>
+<script src="/public/js/urb-socketio.js"></script>
+<script src="/public/js/js3d.js"></script>
+<script src="/public/js/third-dee.js"></script>
+<title>Urbsville</title>
+<link rel="stylesheet" media="all" href="/public/css/main.css" />
+</head>
+<body onLoad="initThirdDee();">
+
+<div id="canvas" style="position:absolute;
+                        left:0px;
+                        top:00px;
+                        width:800px;
+                        height:800px;
+                        border:thin solid white;">
+</div>
+
+<script>
+  var client = new ApiClient('ApiClient', 'admin');
+  var transport = new SocketIoClientTransport('localhost', {port: 8001});
+
+  var gLights = {};
+
+  client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
+  
+  client.addListener(new Listener(/client\/urb/, function (evt) {
+    client.urb.addListener(new Listener(/deviceAdded/, function (evt) {
+      var device = evt.data;
+      var x = Math.floor((Math.random() * 400) - 200);
+      var y = Math.floor((Math.random() * 400) - 200);
+      gLights[device.id] = new Light(x, y);
+      gLights[device.id].setBrightness(0.7);
+
+      gScene.addLight(gLights[device.id]);
+
+      client.urb.device(device.id).addListener(new Listener(/bgcolor/, 
+        function (evt) {
+          gLights[device.id].setColor(evt.data.bgcolor);
+          } 
+      ));
+    }));
+  }));
+  client.connect(transport);
+</script>
+
+</body>
+</html>
