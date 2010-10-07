@@ -468,6 +468,7 @@ var Device = function(kind, name, properties) {
   if (properties) {
     extend(this._properties, properties);
   }
+  this._meta = {}
 };
 inherit(Device, Evented);
 /** @lends Device.prototype */
@@ -503,6 +504,20 @@ extend(Device.prototype, {
                  data: data
                  };
     this.notifyListeners(event);
+  },
+  getMeta: function (key) {
+    return this._meta[key];
+  },
+  setMeta: function (key, value) {
+    // TODO(termie): at some point in the future this should probably have some
+    //               sort of namespacing
+    this._meta[key] = value;
+    var data = {}
+    data[key] = value;
+    var event = {topic: ['device/metaChanged', 'metadata/' + key],
+                 data: data
+                 };
+    this.notifyListeners(event);
   }
 });
 
@@ -513,6 +528,7 @@ extend(Device.prototype, {
 var Urb = function (kind, name) {
   Evented.apply(this, arguments);
   this._devices = [];
+  this._meta = {};
 };
 inherit(Urb, Evented);
 /** @lends Urb.prototype */
@@ -552,6 +568,20 @@ extend(Urb.prototype, {
                                           curry(this.notifyListeners, this));
     }
     return this._deviceListener; 
+  },
+  getMeta: function (key) {
+    return this._meta[key];
+  },
+  setMeta: function (key, value) {
+    // TODO(termie): at some point in the future this should probably have some
+    //               sort of namespacing
+    this._meta[key] = value;
+    var data = {}
+    data[key] = value;
+    var event = {topic: ['urb/metaChanged', 'metadata/' + key],
+                 data: data
+                 };
+    this.notifyListeners(event);
   }
 });
 
@@ -593,6 +623,14 @@ extend(DeviceProxy.prototype, {
     }
     return this._propertyListener;
   },
+  metaListener: function () {
+    if (!this._metaListener) {
+      this._metaListener = new Listener(
+        new RegExp('device/metaChanged'),
+        curry(this.onMetaChanged, this));
+    }
+    return this._metaListener;
+  },
   /**
    * Update internal state and notify listeners when receiving remote state.
    * @param {Object} event A simple event object.
@@ -603,6 +641,11 @@ extend(DeviceProxy.prototype, {
   onPropertyChanged: function (event) {
     for (var i in event.data) {
       this._set(i, event.data[i]);
+    }
+  },
+  onMetaChanged: function (event) {
+    for (var i in event.data) {
+      this._setMeta(i, event.data[i]);
     }
   },
   /**
@@ -623,7 +666,13 @@ extend(DeviceProxy.prototype, {
    */
   set: function (property, value) {
     this.rpc(this.id(), 'set', [property, value]);
-  }
+  },
+  _setMeta: function () {
+    Device.prototype.setMeta.apply(this, arguments);
+  },
+  setMeta: function (key, value) {
+    this.rpc(this.id(), 'setMeta', [key, value]);
+  },
 });
 
 
@@ -646,6 +695,7 @@ var UrbProxy = function (kind, name, connection) {
   this._deviceProxyListeners = {};
   this.addProxyListener(this.deviceAddedListener());
   this.addProxyListener(this.deviceRemovedListener());
+  this.addProxyListener(this.metaListener());
 };
 inherit(UrbProxy, Urb);
 extend(UrbProxy.prototype, Proxy.prototype);
@@ -680,6 +730,14 @@ extend(UrbProxy.prototype, {
     }
     return this._deviceProxyListeners[device.id()]
   },
+  metaListener: function () {
+    if (!this._metaListener) {
+      this._metaListener = new Listener(
+        new RegExp('urb/metaChanged'),
+        curry(this.onMetaChanged, this));
+    }
+    return this._metaListener;
+  },
   /**
    * Event handler for Device events. Builds a DeviceProxy, notifies listeners.
    * 
@@ -705,7 +763,18 @@ extend(UrbProxy.prototype, {
                                 this);
     this.removeProxyListener(this.deviceProxyListener(proxy));
     this.removeDevice(proxy);
-  }
+  },
+  onMetaChanged: function (event) {
+    for (var i in event.data) {
+      this._setMeta(i, event.data[i]);
+    }
+  },
+  _setMeta: function () {
+    Device.prototype.setMeta.apply(this, arguments);
+  },
+  setMeta: function (key, value) {
+    this.rpc(this.id(), 'setMeta', [key, value]);
+  },
 });
 
 
