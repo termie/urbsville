@@ -57,31 +57,37 @@ var webServer = http.createServer(function (request, response) {
   routes.route(request, response, urls);
 });
 
-var hub = new urb.Urb('Urb', 'hub');
+var hub = new urb.Urb('hub');
 
-var socketioApiServer = new urb.ApiServer('ApiServer', 'socketio', hub);
-var socketioTransport = new urb_node.SocketIoServerTransport(
+var sioProtocol = new urb_node.SioServerProtocol(
     8001, null, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'jsonp-polling']});
+var sioApiServer = new urb.ApiServer('sio', sioProtocol, hub);
 
-var tcpApiServer = new urb.ApiServer('ApiServer', 'tcp', hub);
-var tcpTransport = new urb_node.TcpServerTransport(9001, '127.0.0.1');
+//var tcpProtocol = new urb_node.TcpServerProtocol(9001, '127.0.0.1');
+//var tcpApiServer = new urb.ApiServer('tcp', tcpProtocol, hub);
 
-var socketioDeviceServer = new urb.DeviceServer('DeviceServer',
-                                                'socketio',
-                                                hub);
-var socketioDeviceTransport = new urb_node.SocketIoServerTransport(
+var sioDeviceProtocol = new urb_node.SioServerProtocol(
     8000, webServer, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling']});
+var sioDeviceServer = new urb.DeviceServer('sio', sioDeviceProtocol, hub);
 
-socketioApiServer.addListener(new urb.Listener(/.*/, function (event) { 
-    sys.puts('socketio ' + sys.inspect(event)); }));
-tcpApiServer.addListener(new urb.Listener(/.*/, function (event) { 
-    sys.puts('tcp ' + sys.inspect(event)); }));
-hub.addListener(new urb.Listener(/.*/, function (event) {
-    sys.puts('hub ' + sys.inspect(event)); }));
+//sioApiServer.on('event', function (event) { 
+//    sys.puts('sio ' + sys.inspect(event));
+//});
 
-socketioApiServer.listen(socketioTransport);
-tcpApiServer.listen(tcpTransport);
-socketioDeviceServer.listen(socketioDeviceTransport);
+sioDeviceServer.on('event', function (event) { 
+  console.log('siod');
+  console.log(event);
+});
+//tcpApiServer.on('event', function (event) { 
+//    sys.puts('tcp ' + sys.inspect(event));
+//});
+//hub.on('event', function (event) {
+//    sys.puts('hub ' + sys.inspect(event));
+//});
+
+sioApiServer.listen();
+//tcpApiServer.listen();
+sioDeviceServer.listen();
 
 //setInterval(function () {
 //    if (dev.getProperty('state')) {

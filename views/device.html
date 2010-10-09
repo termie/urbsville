@@ -38,6 +38,7 @@
     </div>
     
     <script type="text/javascript" src="/public/js/jquery.js"></script>
+    <script type="text/javascript" src="/public/js/dojo.js"></script>
     <script type="text/javascript" src="/public/js/json.js"></script>
     <script type="text/javascript" src="/public/js/socket.io.js"></script>
     <script type="text/javascript">io.setPath('/public/js/');</script>
@@ -104,12 +105,17 @@
         var rand = Math.floor(Math.random()*10000000);
         
         var dev = new BrowserDevice(rand.toString());
-        var client = new DeviceClient('ApiClient', 'device1', dev);
-        var transport = new SocketIoClientTransport('localhost', {port: 8000});
-        
-        client.addListener(new Listener(new RegExp('property/bgcolor'), function (evt) { console.log('color!') }));        
-        client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
-        client.connect(transport);
+        var protocol = new SioClientProtocol('localhost', {port: 8000});
+        var client = new DeviceClient('device1', protocol, dev);
+          
+        client.on('event', function (event) {
+          console.log(event);
+        });
+
+        dev.on('event', function (event) {
+  //        console.log(event);
+        });
+        client.connect();
         
         function rgbToHex(r, g, b) {
             var hex = [

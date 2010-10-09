@@ -3,6 +3,7 @@
 <html>
 <head>
 <script src="/public/js/jquery.js"></script>
+<script src="/public/js/dojo.js"></script>
 <script type="text/javascript" src="/public/js/json.js"></script>
 <script src="/public/js/socket.io.js"></script>
 <script>io.setPath('/public/js/');</script>
@@ -24,31 +25,36 @@
 </div>
 
 <script>
-  var client = new ApiClient('ApiClient', 'admin');
-  var transport = new SocketIoClientTransport('localhost', {port: 8001});
+  var protocol = new SioClientProtocol('localhost', {port: 8001});
+  var client = new ApiClient('admin', protocol);
 
   var gLights = {};
 
-  client.addListener(new Listener(/.*/, function (evt) { console.log(evt) }));
-  
-  client.addListener(new Listener(/client\/urb/, function (evt) {
-    client.urb.addListener(new Listener(/deviceAdded/, function (evt) {
-      var device = evt.data;
-      var x = Math.floor((Math.random() * 400) - 200);
-      var y = Math.floor((Math.random() * 400) - 200);
-      gLights[device.id] = new Light(x, y);
-      gLights[device.id].setBrightness(0.7);
+  client.on('event', function (evt) { console.log(evt); });
 
-      gScene.addLight(gLights[device.id]);
+  function newDevice(device) {
+    var x = Math.floor((Math.random() * 400) - 200);
+    var y = Math.floor((Math.random() * 400) - 200);
+    gLights[device.id()] = new Light(x, y);
+    gLights[device.id()].setBrightness(0.7);
 
-      client.urb.device(device.id).addListener(new Listener(/bgcolor/, 
-        function (evt) {
-          gLights[device.id].setColor(evt.data.bgcolor);
-          } 
-      ));
-    }));
-  }));
-  client.connect(transport);
+    gScene.addLight(gLights[device.id()]);
+
+    device.on('property/bgcolor', function (bgcolor) {
+      gLights[device.id()].setColor(bgcolor);
+    });
+  }
+
+  client.on('urbAdded', function (urb) {
+    var devices = urb.devices();
+    for (var d in devices) {
+      newDevice(devices[d]);
+    }
+    urb.on('deviceAdded', function (device) {
+      newDevice(device);
+    });
+  });
+  client.connect();
 </script>
 
 </body>
