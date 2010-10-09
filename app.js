@@ -3,6 +3,7 @@ require.paths.unshift('./public/js');
 require.paths.unshift('./third_party/node-static/lib/');
 require.paths.unshift('./third_party/node.routes.js/');
 require.paths.unshift('./third_party/node_mDNS/');
+require.paths.unshift('./third_party/node-dojo/');
 require.paths.unshift('./lib');
 var http = require('http');
 var sys = require('sys');
@@ -12,8 +13,8 @@ var urb_node = require('urb-node');
 var io = require('Socket.IO-node');
 var static = require('node-static');
 var routes = require('routes');
+var dojo = require('dojo');
 
-// var Class imported by require('express')
 
 /**
  * Each Urb has three main tasks:

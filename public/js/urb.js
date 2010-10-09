@@ -1,4 +1,6 @@
-
+if (require) {
+  dojo = require('dojo');
+}
 
 function curry(fn, scope) {
   var __method = fn;
@@ -49,92 +51,151 @@ function clone(obj) {
 }
 
 
+var isArray = Array.isArray;
+
+
 /** Interfaces */
 
-/**
- * @class Base class for objects that send or receive events.
- * @param {String} kind Like a class identifier
- * @param {String} name A unique identifier for this object within its class
- */
-var Evented = function (kind, name) {
-  this._listeners = [];
-  this._name = name;
-  this._kind = kind;
-};
-Evented.prototype = {
-  kind: function () { return this._kind; },
+
+var EventEmitter = dojo.declare('EventEmitter', null, {
+  constructor: function (name) {
+    this._name = name;
+    this._kind = this.declaredClass;
+    this._events = {};
+    this._bubble = null;
+  },
   name: function () { return this._name; },
-  /**
-   * Return what we hope is a unique identifier for this instance.
-   *
-   * Defaults to be kind + / + name.
-   * @returns {String} Unique identifier for this instance
-   */
-  id: function () { return this.kind() + '/' + this.name(); },
-  /**
-   * Serialize this instance, usually for sending over the wire.
-   * @returns {Object} A simple object of strings
-   */
+  kind: function () { return this._kind; },
+  id: function () {
+    return this.kind() + '/' + this.name();
+  },
   toDict: function () {
     return {kind: this.kind(), name: this.name(), id: this.id()};
-  },                        
-  listeners: function () { return this._listeners; },
-  /**
-   * Add to this instance's list of listeners.
-   * @param {implements Listener} listener
-   */
-  addListener: function (listener) {
-    this._listeners.push(listener);
   },
-  /**
-   * Remove a listener from this instance's list of listeners.
-   * @param {implements Listener} listener
-   */
-  removeListener: function (listener) {
-    for (var i in this._listeners) {
-      if (this._listeners[i] == listener) {
-        this._listeners.splice(i, 1);
-        break;
-      }
+  bubble: function () {
+    if (!this._bubble) {
+      this._bubble = dojo.hitch(this, this.emit, 'event');
     }
-  },
-  /**
-   * Notify interested listeners about an event
-   * @param {Object} An object with a list of topics and some data
-   */
-  notifyListeners: function (event) {
-    if (event.topic.indexOf(this.id()) === -1) {
-      event.topic.unshift(this.id());
-    }
-    //sys.puts(this.id() + ' 1event.data: ' + event.data);
-    for (var i in this._listeners) {
-      var newEvent = clone(event);
-      //sys.puts(this.id() + ' 2event.data: ' + newEvent.data);
-      if (this._listeners[i].match(newEvent.topic)) {
-        //sys.puts(sys.inspect(newEvent));
-        this._listeners[i].send(newEvent);
+    return this._bubble;
+  }
+});
+
+/** Methods copied directly from Node's EventEmitter class
+ *  with minor modifications */
+EventEmitter.prototype.emit = function (type) {
+  // TODO(termie): I'd like this second emit to happen _after_ this code
+  if (type != 'event') {
+    var data = {topic: type,
+                emitter: this.id,
+                data: Array.prototype.slice.call(arguments, 1)
+                };
+    this.emit('event', data);
+  }
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events || !this._events.error ||
+        (isArray(this._events.error) && !this._events.error.length))
+    {
+      if (arguments[1] instanceof Error) {
+        throw arguments[1];
+      } else {
+        throw new Error("Uncaught, unspecified 'error' event.");
       }
+      return false;
     }
   }
-};
 
+  if (!this._events) return false;
+  if (!this._events[type]) return false;
 
-var Listener = function (matcher, callback) {
-  this.matcher = matcher;
-  this.callback = callback;
-};
-Listener.prototype = {
-  match: function (topic) {
-    for (var i in topic) {
-      if (topic[i].match(this.matcher)) {
-        return true;
-      }
+  if (typeof this._events[type] == 'function') {
+    if (arguments.length < 3) {
+      // fast case
+      this._events[type].call( this
+                             , arguments[1]
+                             , arguments[2]
+                             );
+    } else {
+      // slower
+      var args = Array.prototype.slice.call(arguments, 1);
+      this._events[type].apply(this, args);
     }
+    return true;
+
+  } else if (isArray(this._events[type])) {
+    var args = Array.prototype.slice.call(arguments, 1);
+
+
+    var listeners = this._events[type].slice(0);
+    for (var i = 0, l = listeners.length; i < l; i++) {
+      listeners[i].apply(this, args);
+    }
+    return true;
+
+  } else {
     return false;
-  },
-  send: function (event) {
-    this.callback(event);
   }
+};
+EventEmitter.prototype.addListener = function (type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('addListener only takes instances of Function');
+  }
+
+  if (!this._events) this._events = {};
+
+  // To avoid recursion in the case that type == "newListeners"! Before
+  // adding it to the listeners, first emit "newListeners".
+  this.emit("newListener", type, listener);
+
+  if (!this._events[type]) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  } else if (isArray(this._events[type])) {
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  } else {
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
+  }
+
+  return this;
+};
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+EventEmitter.prototype.removeListener = function (type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('removeListener only takes instances of Function');
+  }
+
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (!this._events || !this._events[type]) return this;
+
+  var list = this._events[type];
+
+  if (isArray(list)) {
+    var i = list.indexOf(listener);
+    if (i < 0) return this;
+    list.splice(i, 1);
+    if (list.length == 0)
+      delete this._events[type];
+  } else if (this._events[type] === listener) {
+    delete this._events[type];
+  }
+
+  return this;
+};
+EventEmitter.prototype.removeAllListeners = function (type) {
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (type && this._events && this._events[type]) this._events[type] = null;
+  return this;
+};
+EventEmitter.prototype.listeners = function (type) {
+  if (!this._events) this._events = {};
+  if (!this._events[type]) this._events[type] = [];
+  if (!isArray(this._events[type])) {
+    this._events[type] = [this._events[type]];
+  }
+  return this._events[type];
 };
 
 
@@ -454,29 +515,58 @@ Message.prototype = {
   data: {}
 }
 
+/** Mixins */
+
+var Meta = dojo.declare('Meta', null, {
+  constructor: function () {
+    this._meta = {};
+  },
+  meta: function () { return this._meta; },
+  getMeta: function (key) {
+    return this._meta[key];
+  },
+  setMeta: function (key, value) {
+    // TODO(termie): at some point in the future this should probably have some
+    //               sort of namespacing
+    this._meta[key] = value;
+
+    var data = {meta: {}}
+    data.meta[key] = value;
+
+    this.emit('metaChanged', data);
+    this.emit('meta/' + key, value);
+  }
+});
+
+var Server = dojo.declare('Server', null, {
+  constructor: function () {
+    this.transport = null;
+  },
+  listen: function (transport) {
+    this.transport = transport;
+    this.transport.listen(this);
+  },
+  close: function () {
+    this.transport.close();
+    this.transport = null;
+  },
+
+});
+
 
 /** Basic classes */
 
-/**
- * @constructor
- */
-var Device = function(kind, name, properties) {
-  Evented.call(this, kind, name);
-  if (!this._properties) {
-    this._properties = {};
-  }
-  if (properties) {
-    extend(this._properties, properties);
-  }
-  this._meta = {}
-};
-inherit(Device, Evented);
-/** @lends Device.prototype */
-extend(Device.prototype, {
+var Device = dojo.declare('Device', [EventEmitter, Meta], {
+  constructor: function (name, defaults) {
+    if (!this._properties) this._properties = {};
+    if (!this._meta) this._meta = {};
+    if (defaults) dojo.mixin(this._properties, defaults);
+  },
   properties: function () { return this._properties; },
   toDict: function () {
-    var dict = Evented.prototype.toDict.call(this);
+    var dict = this.inherited(arguments);
     dict.properties = this.properties();
+    dict.meta = this.meta();
     return dict;
   },
   get: function (property) {
@@ -484,8 +574,7 @@ extend(Device.prototype, {
       if (this['get_' + property]) {
         return this['get_' + property].call(this);
       }
-      // TODO(termie): do something about errors
-      throw 'not a valid property: ' + property;
+      this.emit('error', 'not a valid property: ' + property);
     }
     return this._properties[property];
   },
@@ -494,45 +583,22 @@ extend(Device.prototype, {
       if (this['set_' + property]) {
         return this['set_' + property].call(this, value);
       }
-      // TODO(termie): do something about errors
-      throw 'not a valid property: ' + property;
+      this.emit('error', 'not a valid property: ' + property);
     }
-    data = {}
-    data[property] = value;
     this._properties[property] = value;
-    var event = {topic: ['device/propertyChanged', 'property/' + property],
-                 data: data
-                 };
-    this.notifyListeners(event);
-  },
-  getMeta: function (key) {
-    return this._meta[key];
-  },
-  setMeta: function (key, value) {
-    // TODO(termie): at some point in the future this should probably have some
-    //               sort of namespacing
-    this._meta[key] = value;
-    var data = {}
-    data[key] = value;
-    var event = {topic: ['device/metaChanged', 'metadata/' + key],
-                 data: data
-                 };
-    this.notifyListeners(event);
+
+    data = {properties: {}};
+    data['properties'][property] = value;
+    this.emit('propertyChanged', data);
+    this.emit('property/' + property, value);
   }
 });
 
 
-/**
- * @constructor
- */
-var Urb = function (kind, name) {
-  Evented.apply(this, arguments);
-  this._devices = [];
-  this._meta = {};
-};
-inherit(Urb, Evented);
-/** @lends Urb.prototype */
-extend(Urb.prototype, {
+var Urb = dojo.declare('Urb', [EventEmitter, Meta], {
+  constructor: function (name) {
+    this._devices = [];
+  },
   devices: function () { return this._devices; },
   device: function (id) {
     var devices = this.devices();
@@ -544,47 +610,20 @@ extend(Urb.prototype, {
   }, 
   addDevice: function (device) {
     this._devices.push(device);
-    
-    // by default we're going to listen to all updates from the device
-    device.addListener(this.deviceListener());
-    this.notifyListeners({topic: ['urb/deviceAdded'],
-                          data: device.toDict()});
+    device.on('event', this.bubble());
+    this.emit('deviceAdded', device);
   },
   removeDevice: function (device) {
     for (var i in this._devices) {
       if (this._devices[i].id() == device.id()) {
-        device.removeListener(this.deviceListener());
-        this.notifyListeners({topic: ['urb/deviceRemoved'],
-                              data: device.toDict()});
         this._devices.splice(i, 1);
+        this.device.removeListener('event', this.bubble());
+        this.emit('deviceRemoved', device);
         break;
       }
     }
   },
-  /* returns the device listener singleton */
-  deviceListener: function () {
-    if (this._deviceListener === undefined) {
-      this._deviceListener = new Listener(/.*/,
-                                          curry(this.notifyListeners, this));
-    }
-    return this._deviceListener; 
-  },
-  getMeta: function (key) {
-    return this._meta[key];
-  },
-  setMeta: function (key, value) {
-    // TODO(termie): at some point in the future this should probably have some
-    //               sort of namespacing
-    this._meta[key] = value;
-    var data = {}
-    data[key] = value;
-    var event = {topic: ['urb/metaChanged', 'metadata/' + key],
-                 data: data
-                 };
-    this.notifyListeners(event);
-  }
 });
-
 
 /** Proxies */
 
@@ -967,12 +1006,29 @@ extend(DeviceClient.prototype, {
  * @class ApiServer provides access to Urbs and their Devices
  * @extends Evented
  */
+
+var ApiServer = dojo.declare('ApiServer', [EventEmitter, Server], {
+  constructor: function (name, urb) {
+    this._clients = [];
+    this.urb = urb;
+    this.urb.on('event', this.urbListener());
+  },
+  urbListener: function () {
+    if (this._urbListener === undefined) {
+      var self = this;
+      this._urbListener = dojo.hitch(this, this.notifyClients);
+    }
+    return this._urbListener; 
+  },
+  notifyClients: function (event) {
+    for (var i in this._clients) {
+      this._clients[i].send(event);
+    }
+  },
+});
+
 var ApiServer = function (kind, name, urb) {
   Evented.call(this, kind, name);
-  this._clients = [];
-  this.transport = null;
-  this.urb = urb;
-  this.urb.addListener(this.urbListener());
 };
 inherit(ApiServer, Evented);
 /** @lends ApiServer.prototype */
