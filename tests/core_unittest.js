@@ -8,10 +8,10 @@ var DeviceTestCase = function () { unittest.TestCase.call(this); }
 sys.inherits(DeviceTestCase, unittest.TestCase);
 DeviceTestCase.prototype.extend({
   testAddRemoveListeners: function () {
-    var dev = new urb.Device('Device', 'test');
-    var listener = new urb.Listener();
+    var dev = new urb.Device('test');
+    var listener = function () {};
     
-    dev.addListener(listener);
+    dev.addListener('event', listener);
     this.assertEqual(dev.listeners().length, 1);
     
     dev.removeListener(listener);

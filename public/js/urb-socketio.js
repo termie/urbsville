@@ -1,16 +1,18 @@
-var SocketIoClientTransport = function (host, options) {
-  ClientTransport.call(this);
-  options['transports'] = ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling'];
-  this._socket = new io.Socket(host, options);
-};
-inherit(SocketIoClientTransport, ClientTransport);
-extend(SocketIoClientTransport.prototype, {
-  connect: function (callbackObj) {
-    ClientTransport.prototype.connect.call(this, callbackObj);
+var SioClientProtocol = dojo.declare('SioClientProtocol', ClientProtocol, {
+  constructor: function (host, options) {
+    options['transports'] = ['websocket', 'flashsocket', 'htmlfile',
+                             'xhr-multipart', 'xhr-polling'];
+    this._socket = new io.Socket(host, options);
+    this._socket.addEvent('connect', dojo.hitch(this, this.emit, 'connect'));
+    this._socket.addEvent('disconnect',
+                          dojo.hitch(this, this.emit, 'disconnect'));
+    this._socket.addEvent('message', dojo.hitch(this, this.onMessage));
+  },
+  onMessage: function (message) {
+    this.emit('message', this.parseMessage(message));
+  },
+  connect: function () {
     this._socket.connect();
-    this._socket.addEvent('connect', curry(this.onConnect, this));
-    this._socket.addEvent('disconnect', curry(this.onDisconnect, this));
-    this._socket.addEvent('message', curry(this.onMessage, this));
   },
   send: function (message) {
     this._socket.send(this.serializeMessage(message));

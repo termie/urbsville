@@ -20,7 +20,7 @@ DeviceServerTestCase.prototype.extend({
     this.mock.verify();
   },
   testBasic: function () {
-    var server = new urb.DeviceServer('deviceserver', 'example', this.urbber);
+    var server = new urb.DeviceServer('example', this.urbber);
 
     this.assertEqual(this.urbber.devices().length, 0);
     server.onClientConnect(this.fakeClient);

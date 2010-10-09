@@ -1,21 +1,16 @@
 
-var BrowserDevice = function (name, properties) {
-  this._properties = {'bgcolor': '#FFFFFF'};
-  Device.call(this, 'BrowserDevice', name, properties);
-  this.addListener(this.bgcolorListener());
-};
-inherit(BrowserDevice, Device);
-extend(BrowserDevice.prototype, {
+var BrowserDevice = dojo.declare('BrowserDevice', Device, {
+  constructor: function (name, defaults) {
+    this.on('property/bgcolor', this.bgcolorListener());
+  },
+  _properties: {'bgcolor': '#000000'},
   bgcolorListener: function () {
     if (!this._propertyListener) {
-      this._propertyListener = new Listener(
-        new RegExp('property/bgcolor'),
-        curry(this.onBgcolorChanged, this));
+      this._propertyListener = dojo.hitch(this, this.onBgcolorChanged);
     }
     return this._propertyListener;
   },
-  onBgcolorChanged: function (event) {
-    var newColor = event.data.bgcolor;
-    document.body.style.backgroundColor = newColor;
+  onBgcolorChanged: function (bgcolor) {
+    document.body.style.backgroundColor = bgcolor;
   }
 });

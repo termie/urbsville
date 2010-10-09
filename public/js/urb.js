@@ -1,4 +1,6 @@
-
+if (typeof require !== 'undefined') {
+  dojo = require('dojo');
+}
 
 function curry(fn, scope) {
   var __method = fn;
@@ -49,254 +51,155 @@ function clone(obj) {
 }
 
 
+var isArray = Array.isArray;
+
+
 /** Interfaces */
 
-/**
- * @class Base class for objects that send or receive events.
- * @param {String} kind Like a class identifier
- * @param {String} name A unique identifier for this object within its class
- */
-var Evented = function (kind, name) {
-  this._listeners = [];
-  this._name = name;
-  this._kind = kind;
-};
-Evented.prototype = {
-  kind: function () { return this._kind; },
+
+var EventEmitter = dojo.declare('EventEmitter', null, {
+  constructor: function (name) {
+    this._name = name;
+    this._kind = this.declaredClass;
+    this._events = {};
+    this._bubble = null;
+  },
   name: function () { return this._name; },
-  /**
-   * Return what we hope is a unique identifier for this instance.
-   *
-   * Defaults to be kind + / + name.
-   * @returns {String} Unique identifier for this instance
-   */
-  id: function () { return this.kind() + '/' + this.name(); },
-  /**
-   * Serialize this instance, usually for sending over the wire.
-   * @returns {Object} A simple object of strings
-   */
+  kind: function () { return this._kind; },
+  id: function () {
+    return this.kind() + '/' + this.name();
+  },
   toDict: function () {
     return {kind: this.kind(), name: this.name(), id: this.id()};
-  },                        
-  listeners: function () { return this._listeners; },
-  /**
-   * Add to this instance's list of listeners.
-   * @param {implements Listener} listener
-   */
-  addListener: function (listener) {
-    this._listeners.push(listener);
   },
-  /**
-   * Remove a listener from this instance's list of listeners.
-   * @param {implements Listener} listener
-   */
-  removeListener: function (listener) {
-    for (var i in this._listeners) {
-      if (this._listeners[i] == listener) {
-        this._listeners.splice(i, 1);
-        break;
-      }
+  bubble: function () {
+    if (!this._bubble) {
+      this._bubble = dojo.hitch(this, this.emit, 'event');
     }
-  },
-  /**
-   * Notify interested listeners about an event
-   * @param {Object} An object with a list of topics and some data
-   */
-  notifyListeners: function (event) {
-    if (event.topic.indexOf(this.id()) === -1) {
-      event.topic.unshift(this.id());
-    }
-    //sys.puts(this.id() + ' 1event.data: ' + event.data);
-    for (var i in this._listeners) {
-      var newEvent = clone(event);
-      //sys.puts(this.id() + ' 2event.data: ' + newEvent.data);
-      if (this._listeners[i].match(newEvent.topic)) {
-        //sys.puts(sys.inspect(newEvent));
-        this._listeners[i].send(newEvent);
+    return this._bubble;
+  }
+});
+
+/** Methods copied directly from Node's EventEmitter class
+ *  with minor modifications */
+EventEmitter.prototype.emit = function (type) {
+  // TODO(termie): I'd like this second emit to happen _after_ this code
+  if (type != 'event' && type != 'newListener') {
+    var args = Array.prototype.slice.call(arguments, 1);
+    if (args.length == 1) args = args[0];
+    var data = {topic: type,
+                emitter: this.id(),
+                data: args,
+                };
+    this.emit('event', data);
+  }
+
+  // If there is no 'error' event listener then throw.
+  if (type === 'error') {
+    if (!this._events || !this._events.error ||
+        (isArray(this._events.error) && !this._events.error.length))
+    {
+      if (arguments[1] instanceof Error) {
+        throw arguments[1];
+      } else {
+        throw new Error("Uncaught, unspecified 'error' event.");
       }
+      return false;
     }
   }
-};
 
+  if (!this._events) return false;
+  if (!this._events[type]) return false;
 
-var Listener = function (matcher, callback) {
-  this.matcher = matcher;
-  this.callback = callback;
-};
-Listener.prototype = {
-  match: function (topic) {
-    for (var i in topic) {
-      if (topic[i].match(this.matcher)) {
-        return true;
-      }
+  if (typeof this._events[type] == 'function') {
+    if (arguments.length < 3) {
+      // fast case
+      this._events[type].call( this
+                             , arguments[1]
+                             , arguments[2]
+                             );
+    } else {
+      // slower
+      var args = Array.prototype.slice.call(arguments, 1);
+      this._events[type].apply(this, args);
     }
+    return true;
+
+  } else if (isArray(this._events[type])) {
+    var args = Array.prototype.slice.call(arguments, 1);
+
+
+    var listeners = this._events[type].slice(0);
+    for (var i = 0, l = listeners.length; i < l; i++) {
+      listeners[i].apply(this, args);
+    }
+    return true;
+
+  } else {
     return false;
-  },
-  send: function (event) {
-    this.callback(event);
   }
 };
-
-
-/**
- * @class Proxy is currently used as a mixin to provide an interface to RPCs
- */
-var Proxy = function (connection) {
-  this._connection = connection;
-  this._proxyListeners = [];
-};
-Proxy.prototype = {
-  proxyListeners: function () { return this._proxyListeners; },
-  /**
-   * Add to this instance's list of listeners.
-   * @param {implements Listener} listener
-   */
-  addProxyListener: function (listener) {
-    this._proxyListeners.push(listener);
-  },
-  /**
-   * Remove a listener from this instance's list of listeners.
-   * @param {implements Listener} listener
-   */
-  removeProxyListener: function (listener) {
-    for (var i in this._proxyListeners) {
-      if (this._proxyListeners[i] == listener) {
-        this._proxyListeners.splice(i, 1);
-        break;
-      }
-    }
-  },
-  /**
-   * Notify interested listeners about an event
-   * @param {Object} An object with a list of topics and some data
-   */
-  notifyProxyListeners: function (event) {
-    //sys.puts(this.id() + ' 1event.data: ' + sys.inspect(event.data));
-    for (var i in this._proxyListeners) {
-      var newEvent = clone(event);
-      //sys.puts(this.id() + ' 2event.data: ' + newEvent.data);
-      if (this._proxyListeners[i].match(newEvent.topic)) {
-        //sys.puts(sys.inspect(newEvent));
-        this._proxyListeners[i].send(newEvent);
-      }
-    }
-  },
-  /**
-   * Executes an RPC
-   * @param {String} id Target object of the RPC
-   * @param {String} method Target method of the RPC
-   * @param {Array} args Arguments for the RPC
-   */
-  rpc: function (id, method, args) {
-    this._connection.send({kind: 'rpc',
-                           data: {id: id,
-                                  method: method,
-                                  args: args}
-                           });
+EventEmitter.prototype.addListener = function (type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('addListener only takes instances of Function');
   }
-};
 
+  if (!this._events) this._events = {};
 
-/**
- * @class Connection knows how to send.
- */
-var Connection = function (id, transport) {
-  this._id = id
-  this.transport = transport;
-};
-Connection.prototype = {
-  id: function () {
-    return this._id;
-  },
-  /**
-   * Send an object over the wire.
-   * @param {Object} obj A simple event or rpc object.
-   */
-  send: function (obj) {
-    this.transport.send(this.serializeMessage(obj));
-  },
-  serializeMessage: function (obj) {
-    return JSON.stringify(obj);
+  // To avoid recursion in the case that type == "newListeners"! Before
+  // adding it to the listeners, first emit "newListeners".
+  this.emit("newListener", type, listener);
+
+  if (!this._events[type]) {
+    // Optimize the case of one listener. Don't need the extra array object.
+    this._events[type] = listener;
+  } else if (isArray(this._events[type])) {
+    // If we've already got an array, just append.
+    this._events[type].push(listener);
+  } else {
+    // Adding the second element, need to change to array.
+    this._events[type] = [this._events[type], listener];
   }
-}
 
-
-/**
- * @class ClientTransport is a base class for Client-side transports.
- *
- * It will usually be passed to a Client's connect method.
- */
-var ClientTransport = function () {
-  this._callbackObj = null;
-}
-ClientTransport.prototype = {
-  connect: function (callbackObj) {
-    this._callbackObj = callbackObj;
-  },
-  close: function () {
-    // not implemented
-  },
-  onConnect: function () {
-    this._callbackObj.onConnect.call(this._callbackObj, this);
-  },
-  onDisconnect: function () {
-    this._callbackObj.onDisconnect.call(this._callbackObj, this);
-  },
-  onMessage: function (message) {
-    var parsed = this.parseMessage(message);
-    this._callbackObj.onMessage.call(this._callbackObj, parsed, this);
-  },
-  send: function (message) {
-    // pass
-  },
-  parseMessage: function (message) {
-    return JSON.parse(message);
-  },
-  serializeMessage: function (message) {
-    return JSON.stringify(message);
+  return this;
+};
+EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+EventEmitter.prototype.removeListener = function (type, listener) {
+  if ('function' !== typeof listener) {
+    throw new Error('removeListener only takes instances of Function');
   }
+
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (!this._events || !this._events[type]) return this;
+
+  var list = this._events[type];
+
+  if (isArray(list)) {
+    var i = list.indexOf(listener);
+    if (i < 0) return this;
+    list.splice(i, 1);
+    if (list.length == 0)
+      delete this._events[type];
+  } else if (this._events[type] === listener) {
+    delete this._events[type];
+  }
+
+  return this;
+};
+EventEmitter.prototype.removeAllListeners = function (type) {
+  // does not use listeners(), so no side effect of creating _events[type]
+  if (type && this._events && this._events[type]) this._events[type] = null;
+  return this;
+};
+EventEmitter.prototype.listeners = function (type) {
+  if (!this._events) this._events = {};
+  if (!this._events[type]) this._events[type] = [];
+  if (!isArray(this._events[type])) {
+    this._events[type] = [this._events[type]];
+  }
+  return this._events[type];
 };
 
-
-/**
- * @class ServerTransport is an interface class for Server-side transports.
- *
- * It will usually be passed to a Server's listen method.
- */
-var ServerTransport = function () {
-  this._callbackObj = null;
-}
-ServerTransport.prototype = {
-  listen: function (callbackObj) {
-    this._callbackObj = callbackObj;
-  },
-  close: function () {
-    // not implemented
-  },
-  onClientConnect: function (client) {
-    var client = this.getClient(client);
-    this._callbackObj.onClientConnect.call(this._callbackObj, client, this);
-  },
-  onClientDisconnect: function (client) {
-    var client = this.getClient(client);
-    this._callbackObj.onClientDisconnect.call(this._callbackObj, client, this);
-  },
-  onClientMessage: function (message, client) {
-    var client = this.getClient(client);
-    var parsed = this.parseMessage(message);
-    this._callbackObj.onClientMessage.call(
-        this._callbackObj, parsed, client, this);
-  },
-  parseMessage: function (message) {
-    return JSON.parse(message);
-  },
-  serializeMessage: function (message) {
-    return JSON.stringify(message);
-  },
-  getClient: function (obj) {
-    return obj;
-  },
-};
 
 var StringProtocol = function (callback) {
   this._buffer = [];
@@ -454,29 +357,121 @@ Message.prototype = {
   data: {}
 }
 
+/** Mixins */
+
+var Meta = dojo.declare('Meta', null, {
+  constructor: function () {
+    this._meta = {};
+  },
+  meta: function () { return this._meta; },
+  getMeta: function (key) {
+    return this._meta[key];
+  },
+  setMeta: function (key, value) {
+    // TODO(termie): at some point in the future this should probably have some
+    //               sort of namespacing
+    this._meta[key] = value;
+
+    var data = {meta: {}}
+    data.meta[key] = value;
+
+    this.emit('metaChanged', data);
+    this.emit('meta/' + key, value);
+  }
+});
+
+/** SomethingSomething */
+var Server = dojo.declare('Server', EventEmitter, {
+  constructor: function (name, protocol) {
+    this.protocol = protocol;
+    this.protocol.on('clientConnected',
+                     dojo.hitch(this, this.onClientConnect));
+    this.protocol.on('clientDisconnected',
+                     dojo.hitch(this, this.onClientDisconnect));
+  },
+  listen: function () {
+    this.protocol.listen();
+  },
+  close: function () {
+    this.protocol.close();
+  },
+  onClientConnect: function (client) { },
+  onClientDisconnect: function (client) { },
+});
+
+var Client = dojo.declare('Client', EventEmitter, {
+  constructor: function (name, protocol) {
+    this.protocol = protocol;
+    this.protocol.on('connect', dojo.hitch(this, this.onConnect));
+    this.protocol.on('disconnect', dojo.hitch(this, this.onDisconnect));
+    this.protocol.on('message', dojo.hitch(this, this.onMessage));
+  },
+  connect: function () {
+    this.protocol.connect();
+  },
+  close: function () {
+    this.protocol.close();
+  },
+  send: function (data) {
+    this.protocol.send(data);
+  },
+  onConnect: function (event) { this.emit('connected', this); },
+  onDisconnect: function (event) { this.emit('disconnected', this); },
+  onMessage: function (message) { this.emit('event', message); },
+});
+
+
+var ServerProtocol = dojo.declare('ServerProtocol', EventEmitter, {
+  listen: function () {
+    // start listening
+  },
+  close: function () {
+    // stop listening
+  },
+});
+
+
+var ClientProtocol = dojo.declare('ClientProtocol', EventEmitter, {
+  connect: function () { },
+  close: function () { },
+  send: function (message) {
+    // pass
+  },
+  parseMessage: function (message) {
+    return JSON.parse(message);
+  },
+  serializeMessage: function (message) {
+    var dict = ToDict(message);
+    return JSON.stringify(dict);
+  }
+});
+
+var ToDict = function (obj) {
+  var o = {};
+  for (var k in obj) {
+    if (obj[k].toDict) {
+      o[k] = obj[k].toDict();
+    } else {
+      o[k] = obj[k];
+    }
+  }
+  return o;
+}
+
 
 /** Basic classes */
 
-/**
- * @constructor
- */
-var Device = function(kind, name, properties) {
-  Evented.call(this, kind, name);
-  if (!this._properties) {
-    this._properties = {};
-  }
-  if (properties) {
-    extend(this._properties, properties);
-  }
-  this._meta = {}
-};
-inherit(Device, Evented);
-/** @lends Device.prototype */
-extend(Device.prototype, {
+var Device = dojo.declare('Device', [EventEmitter, Meta], {
+  constructor: function (name, defaults) {
+    if (!this._properties) this._properties = {};
+    if (!this._meta) this._meta = {};
+    if (defaults) dojo.mixin(this._properties, defaults);
+  },
   properties: function () { return this._properties; },
   toDict: function () {
-    var dict = Evented.prototype.toDict.call(this);
+    var dict = this.inherited(arguments);
     dict.properties = this.properties();
+    dict.meta = this.meta();
     return dict;
   },
   get: function (property) {
@@ -484,8 +479,7 @@ extend(Device.prototype, {
       if (this['get_' + property]) {
         return this['get_' + property].call(this);
       }
-      // TODO(termie): do something about errors
-      throw 'not a valid property: ' + property;
+      this.emit('error', 'not a valid property: ' + property);
     }
     return this._properties[property];
   },
@@ -494,45 +488,22 @@ extend(Device.prototype, {
       if (this['set_' + property]) {
         return this['set_' + property].call(this, value);
       }
-      // TODO(termie): do something about errors
-      throw 'not a valid property: ' + property;
+      this.emit('error', 'not a valid property: ' + property);
     }
-    data = {}
-    data[property] = value;
     this._properties[property] = value;
-    var event = {topic: ['device/propertyChanged', 'property/' + property],
-                 data: data
-                 };
-    this.notifyListeners(event);
-  },
-  getMeta: function (key) {
-    return this._meta[key];
-  },
-  setMeta: function (key, value) {
-    // TODO(termie): at some point in the future this should probably have some
-    //               sort of namespacing
-    this._meta[key] = value;
-    var data = {}
-    data[key] = value;
-    var event = {topic: ['device/metaChanged', 'metadata/' + key],
-                 data: data
-                 };
-    this.notifyListeners(event);
+
+    data = {properties: {}};
+    data['properties'][property] = value;
+    this.emit('propertyChanged', data);
+    this.emit('property/' + property, value);
   }
 });
 
 
-/**
- * @constructor
- */
-var Urb = function (kind, name) {
-  Evented.apply(this, arguments);
-  this._devices = [];
-  this._meta = {};
-};
-inherit(Urb, Evented);
-/** @lends Urb.prototype */
-extend(Urb.prototype, {
+var Urb = dojo.declare('Urb', [EventEmitter, Meta], {
+  constructor: function (name) {
+    this._devices = [];
+  },
   devices: function () { return this._devices; },
   device: function (id) {
     var devices = this.devices();
@@ -544,49 +515,62 @@ extend(Urb.prototype, {
   }, 
   addDevice: function (device) {
     this._devices.push(device);
-    
-    // by default we're going to listen to all updates from the device
-    device.addListener(this.deviceListener());
-    this.notifyListeners({topic: ['urb/deviceAdded'],
-                          data: device.toDict()});
+    device.on('event', this.bubble());
+    this.emit('deviceAdded', device);
   },
   removeDevice: function (device) {
     for (var i in this._devices) {
       if (this._devices[i].id() == device.id()) {
-        device.removeListener(this.deviceListener());
-        this.notifyListeners({topic: ['urb/deviceRemoved'],
-                              data: device.toDict()});
         this._devices.splice(i, 1);
+        device.removeListener('event', this.bubble());
+        this.emit('deviceRemoved', device);
         break;
       }
     }
   },
-  /* returns the device listener singleton */
-  deviceListener: function () {
-    if (this._deviceListener === undefined) {
-      this._deviceListener = new Listener(/.*/,
-                                          curry(this.notifyListeners, this));
+  toDict: function () {
+    var dict = this.inherited(arguments);
+    var deviceDicts = [];
+    var devices = this.devices();
+    for (var d in devices) {
+      deviceDicts.push(devices[d].toDict())
     }
-    return this._deviceListener; 
+    dict.devices = deviceDicts;
+    return dict;
   },
-  getMeta: function (key) {
-    return this._meta[key];
+});
+
+/** Proxies */
+
+var Proxy = dojo.declare('Proxy', EventEmitter, {
+  constructor: function (name, filterId) {
+    this.filterId = filterId;
+    this.client = null;
   },
-  setMeta: function (key, value) {
-    // TODO(termie): at some point in the future this should probably have some
-    //               sort of namespacing
-    this._meta[key] = value;
-    var data = {}
-    data[key] = value;
-    var event = {topic: ['urb/metaChanged', 'metadata/' + key],
-                 data: data
-                 };
-    this.notifyListeners(event);
+  attach: function (client) {
+    this.client = client;
+    this.client.on('event', this.eventListener());
+  },
+  eventListener: function () {
+    if (!this._eventListener) {
+      this._eventListener = dojo.hitch(this, this.onEvent);
+    }
+    return this._eventListener;
+  },
+  onEvent: function (event) {
+    if (event.emitter != this.filterId) return;
+    this.emit(event.topic, event.data);
+  },
+  rpc: function (method, args) {
+    var id = this.filterId;
+    this.client.send({topic: 'rpc',
+                          data: {id: id,
+                                 method: method,
+                                 args: args}
+                           });
   }
 });
 
-
-/** Proxies */
 
 /**
  * @class DeviceProxy for a Device being accessed remotely.
@@ -605,29 +589,24 @@ extend(Urb.prototype, {
  *
  * @extends Device
  */
-var DeviceProxy = function (kind, name, properties, connection) {
-  Device.call(this, kind, name, properties);
-  Proxy.call(this, connection);
-  this.connectionId = connection.id();
-  this.addProxyListener(this.propertyListener());
-};
-inherit(DeviceProxy, Device);
-extend(DeviceProxy.prototype, Proxy.prototype);
-/** @lends DeviceProxy.prototype */
-extend(DeviceProxy.prototype, {
+var DeviceProxy = dojo.declare('DeviceProxy', Device, {
+  constructor: function (name, defaults, kind, client) {
+    this.client = client;
+    this._kind = kind;
+    this.proxy = Proxy(this.name(), this.id());
+    this.proxy.on('propertyChanged', this.propertyListener());
+    this.proxy.on('metaChanged', this.metaListener());
+    this.proxy.attach(client);
+  },
   propertyListener: function () {
     if (!this._propertyListener) {
-      this._propertyListener = new Listener(
-        new RegExp('device/propertyChanged'),
-        curry(this.onPropertyChanged, this));
+      this._propertyListener = dojo.hitch(this, this.onPropertyChanged);
     }
     return this._propertyListener;
   },
   metaListener: function () {
     if (!this._metaListener) {
-      this._metaListener = new Listener(
-        new RegExp('device/metaChanged'),
-        curry(this.onMetaChanged, this));
+      this._metaListener = dojo.hitch(this, this.onMetaChanged);
     }
     return this._metaListener;
   },
@@ -635,17 +614,14 @@ extend(DeviceProxy.prototype, {
    * Update internal state and notify listeners when receiving remote state.
    * @param {Object} event A simple event object.
    */
-  onEvent: function (event) {
-    this.notifyProxyListeners(event);
-  },
   onPropertyChanged: function (event) {
-    for (var i in event.data) {
-      this._set(i, event.data[i]);
+    for (var i in event.properties) {
+      this._set(i, event.properties[i]);
     }
   },
   onMetaChanged: function (event) {
-    for (var i in event.data) {
-      this._setMeta(i, event.data[i]);
+    for (var i in event.meta) {
+      this._setMeta(i, event.meta[i]);
     }
   },
   /**
@@ -653,8 +629,8 @@ extend(DeviceProxy.prototype, {
    * @see Device#set
    * @private
    */
-  _set: function () {
-    Device.prototype.set.apply(this, arguments);
+  _set: function (property, value) {
+    Device.prototype.set.call(this, property, value);
   },
   /**
    * Sends a set RPC to the remote device.
@@ -665,13 +641,13 @@ extend(DeviceProxy.prototype, {
    * @see Device#set
    */
   set: function (property, value) {
-    this.rpc(this.id(), 'set', [property, value]);
+    this.proxy.rpc('set', [property, value]);
   },
   _setMeta: function () {
-    Device.prototype.setMeta.apply(this, arguments);
+    this.inherited('setMeta', arguments);
   },
   setMeta: function (key, value) {
-    this.rpc(this.id(), 'setMeta', [key, value]);
+    this.proxy.rpc('setMeta', [key, value]);
   },
 });
 
@@ -689,80 +665,55 @@ extend(DeviceProxy.prototype, {
  * @extends Urb
  * @borrows Proxy#rpc as this.rpc
  */
-var UrbProxy = function (kind, name, connection) {
-  Urb.call(this, kind, name);
-  Proxy.call(this, connection);
-  this._deviceProxyListeners = {};
-  this.addProxyListener(this.deviceAddedListener());
-  this.addProxyListener(this.deviceRemovedListener());
-  this.addProxyListener(this.metaListener());
-};
-inherit(UrbProxy, Urb);
-extend(UrbProxy.prototype, Proxy.prototype);
-/** @lends UrbProxy.prototype */
-extend(UrbProxy.prototype, {
-  /**
-   * Check whether we need to do 
-   *
-   * @params {Object} event {@link Event}
-   */
-  onEvent: function (event) {
-    this.notifyProxyListeners(event);
+var UrbProxy = dojo.declare('UrbProxy', Urb, {
+  constructor: function (name, kind, client) {
+    this.client = client;
+    this._kind = kind;
+    this.proxy = Proxy(this.name(), this.id());
+    this.proxy.on('deviceAdded', this.deviceAddedListener());
+    this.proxy.on('deviceRemoved', this.deviceRemovedListener());
+    this.proxy.on('metaChanged', this.metaListener());
+    this.proxy.attach(client);
   },
   deviceAddedListener: function () {
     if (!this._deviceAddedListener) {
-      this._deviceAddedListener = new Listener(
-        'urb/deviceAdded', curry(this.onDeviceAdded, this));
+      this._deviceAddedListener = dojo.hitch(this, this.onDeviceAdded);
     }
     return this._deviceAddedListener;
   },
   deviceRemovedListener: function () {
     if (!this._deviceRemovedListener) {
-      this._deviceRemovedListener = new Listener(
-        'urb/deviceRemoved', curry(this.onDeviceRemoved, this));
+      this._deviceRemovedListener = dojo.hitch(this, this.onDeviceRemoved);
     }
     return this._deviceRemovedListener;
   },
-  deviceProxyListener: function (device) {
-    if (!this._deviceProxyListeners[device.id()]) {
-      this._deviceProxyListeners[device.id()] = new Listener(
-          new RegExp(device.id()), curry(device.onEvent, device));
-    }
-    return this._deviceProxyListeners[device.id()]
-  },
   metaListener: function () {
     if (!this._metaListener) {
-      this._metaListener = new Listener(
-        new RegExp('urb/metaChanged'),
-        curry(this.onMetaChanged, this));
+      this._metaListener = dojo.hitch(this, this.onMetaChanged);
     }
     return this._metaListener;
   },
   /**
    * Event handler for Device events. Builds a DeviceProxy, notifies listeners.
    * 
-   * Also makes sure that further events from the remote connection are
+   * Also makes sure that further events from the remote client are
    * forwarded to the DeviceProxy.
    *  
    * @param {Object} device A serialized Device. {@link Device#toDict}
    */
-  onDeviceAdded: function (event) {
-    var device = event.data;
-    var proxy = new DeviceProxy(device.kind, 
-                                device.name,
-                                device.properties,
-                                this._connection);
-    this.addDevice(proxy);
-    this.addProxyListener(this.deviceProxyListener(proxy));
+  onDeviceAdded: function (data) {
+    var device = new DeviceProxy(data.name,
+                                 data.properties,
+                                 data.kind,
+                                 this.client);
+    this.addDevice(device);
   },
-  onDeviceRemoved: function (event) {
-    var device = event.data;
-    var proxy = new DeviceProxy(device.kind, 
-                                device.name,
-                                device.properties,
-                                this);
-    this.removeProxyListener(this.deviceProxyListener(proxy));
-    this.removeDevice(proxy);
+  onDeviceRemoved: function (data) {
+    var device = new DeviceProxy(data.name,
+                                 data.properties,
+                                 data.kind,
+                                 this.client);
+    this.removeDevice(device);
   },
   onMetaChanged: function (event) {
     for (var i in event.data) {
@@ -770,13 +721,12 @@ extend(UrbProxy.prototype, {
     }
   },
   _setMeta: function () {
-    Device.prototype.setMeta.apply(this, arguments);
+    this.inherited('setMeta', arguments);
   },
   setMeta: function (key, value) {
-    this.rpc(this.id(), 'setMeta', [key, value]);
+    this.proxy.rpc(this.id(), 'setMeta', [key, value]);
   },
 });
-
 
 /** Client-side */
 
@@ -790,35 +740,15 @@ extend(UrbProxy.prototype, {
  * @extends Evented
  * @borrows Connection#send as this.send
  */
-var ApiClient = function () {
-  Evented.apply(this, arguments);
-  this.urb = null;
-  this.transport = null;
-};
-inherit(ApiClient, Evented);
-/** @lends ApiClient.prototype */
-extend(ApiClient.prototype, {
-  /**
-   * Initiate a connection using the given transport.
-   *
-   * TODO(termie): Should probably clear current state if any exists.
-   *
-   * @param {implements Transport} transport {@link Transport} 
-   */
-  connect: function (transport) {
-    this.transport = transport;
-    this.transport.connect(this)
-  },
-  close: function () {
-    this.transport.close();
-    this.transport = null;
+var ApiClient = dojo.declare('ApiClient', Client, {
+  constructor: function (name, protocol) {
+    this.urb = null;
   },
   /**
    * Event handler for connect events. Notifies listeners.
    */
   onConnect: function () {
-    this.notifyListeners({topic: ['client/connect'],
-                          data: this.id()});
+    this.emit('connected', this);
   },
   /**
    * Event handler for disconnect events. Notifies listeners.
@@ -826,8 +756,7 @@ extend(ApiClient.prototype, {
    * TODO(termie): clean up urbs and devices
    */
   onDisconnect: function () {
-    this.notifyListeners({topic: ['client/disconnect'],
-                          data: this.id()});
+    this.emit('disconnected', this);
   },
   /**
    * Event handler for Urb events. Builds an UrbProxy, notifies listeners.
@@ -837,23 +766,18 @@ extend(ApiClient.prototype, {
    *
    * @param {Object} urb A serialized Urb. {@link Urb#toDict}
    */
-  onUrb: function (urb) {
-    var proxy = new UrbProxy(urb.kind, urb.name, this);
+  onUrbAdded: function (data) {
+    var proxy = new UrbProxy(data.name, data.kind, this);
+    for (var d in data.devices) {
+      var device = new DeviceProxy(data.devices[d].name,
+                                   data.devices[d].properties,
+                                   data.devices[d].kind,
+                                   this);
+      proxy.addDevice(device);
+    }
     this.urb = proxy;
-    this.addListener(this.urbListener(proxy));
-    this.notifyListeners({topic: ['client/urb'],
-                          data: proxy.id()});
-  },
-  /**
-   * Generic event handler. Notify listeners.
-   *
-   * In many cases the event will be a state change event for a remote Urb
-   * or Device.
-   *
-   * @param {Object} event {@link Event}
-   */
-  onEvent: function (event) {
-    this.notifyListeners(event);
+    //this.urb.on('event', this.bubble());
+    this.emit('urbAdded', this.urb);
   },
   /**
    * Handles receiving a new message from the remote ApiServer and routing it.
@@ -861,76 +785,34 @@ extend(ApiClient.prototype, {
    * @param {object} message {@link Message}
    */
   onMessage: function (message) {
-    if (message.kind == 'urb') {
-      this.onUrb(message.data);
-    } else if (message.kind == 'device') {
-      this.onDevice(message.data);
-    } else if (message.kind == 'event') {
-      this.onEvent(message.data);
+    if (message.topic == 'urbAdded') {
+      this.onUrbAdded(message.data);
     }
+    this.inherited(arguments);
   },
-  urbListener: function (urb) {
-    if (!this._urbListener) {
-      this._urbListener = new Listener(
-          new RegExp(urb.id()), curry(urb.onEvent, urb));
-    }
-    return this._urbListener;
-  },
-  send: function (message) {
-    this.transport.send(message);
-  }
 });
 
-var DeviceClient = function (kind, name, device) {
-  Evented.call(this, kind, name);
-  this.transport = null;
-  this.device = device;
-  this.device.addListener(this.deviceListener());
-};
-inherit(DeviceClient, Evented);
-/** @lends DeviceClient.prototype */
-extend(DeviceClient.prototype, {
-  /**
-   * Initiate a connection using the given transport.
-   *
-   * TODO(termie): Should probably clear current state if any exists.
-   *
-   * @param {implements Transport} transport {@link Transport} 
-   */
-  connect: function (transport) {
-    this.transport = transport;
-    this.transport.connect(this)
-  },
-  close: function () {
-    this.transport.close();
-    this.transport = null;
+
+var DeviceClient = dojo.declare('DeviceClient', Client, {
+  constructor: function (name, protocol, device) {
+    this.device = device;
+    this.device.on('event', this.deviceListener());
   },
   /**
    * Event handler for connect events. Notifies listeners.
    */
   onConnect: function () {
-    this.send({kind: 'device',
-               data: this.device.toDict()});
-    this.notifyListeners({topic: ['deviceclient/connect'],
-                          data: this.id()});
+    this.send({topic: 'deviceAdded',
+               emitter: this.id(),
+               data: this.device});
+    this.emit('connected', this);
   },
   /**
    * Event handler for disconnect events. Notifies listeners.
    *
    */
   onDisconnect: function () {
-    this.notifyListeners({topic: ['deviceclient/disconnect'],
-                          data: this.id()});
-  },
-  /**
-   * Generic event handler. Notify listeners.
-   *
-   * In many cases the event will be a state change event for a remote Device.
-   *
-   * @param {Object} event {@link Event}
-   */
-  onEvent: function (event) {
-    this.send({kind: 'event', data: event});
+    this.emit('disconnected', this);
   },
   /**
    * Handles receiving a new message from the remote DeviceServer.
@@ -938,11 +820,10 @@ extend(DeviceClient.prototype, {
    * @param {object} message {@link Message}
    */
   onMessage: function (message) {
-    if (message.kind == 'rpc') {
-      this.notifyListeners({topic: ['deviceclient/rpc'],
-                            data: message.data});
+    if (message.topic == 'rpc') {
       this.onRpc(message.data);
     }
+    this.inherited(arguments);
   },
   onRpc: function (rpc) {
     if (rpc.id == this.device.id()) {
@@ -951,13 +832,10 @@ extend(DeviceClient.prototype, {
   },
   deviceListener: function () {
     if (!this._deviceListener) {
-      this._deviceListener = new Listener(/.*/, curry(this.onEvent, this));
+      this._deviceListener = dojo.hitch(this, this.send)
     }
     return this._deviceListener;
   },
-  send: function (message) {
-    this.transport.send(message);
-  }
 });
 
 
@@ -967,75 +845,31 @@ extend(DeviceClient.prototype, {
  * @class ApiServer provides access to Urbs and their Devices
  * @extends Evented
  */
-var ApiServer = function (kind, name, urb) {
-  Evented.call(this, kind, name);
-  this._clients = [];
-  this.transport = null;
-  this.urb = urb;
-  this.urb.addListener(this.urbListener());
-};
-inherit(ApiServer, Evented);
-/** @lends ApiServer.prototype */
-extend(ApiServer.prototype, {
-  /**
-   * Initiate listening by the ApiServer using given Transport.
-   *
-   * @param {implements Transport} transport {@link Transport}
-   */
-  listen: function(transport) {
-    this.transport = transport;
-    this.transport.listen(this);
+var ApiServer = dojo.declare('ApiServer', Server, {
+  constructor: function (name, protocol, urb) {
+    this._clients = [];
+    this.urb = urb;
+    this.urb.on('event', this.urbListener());
   },
-  close: function () {
-    if (this.transport) {
-      this.transport.close();
-      this.transport = null;
-    }
-  },
-  /**
-   * Notifies listeners of the ApiServer on events from Urbs.
-   * @return {Listener} A listener singleton for events from Urbs 
-   */
   urbListener: function () {
-    if (this._urbListener === undefined) {
-      var self = this;
-      this._urbListener = new Listener(/.*/, curry(this.onEvent, this));
+    if (!this._urbListener) {
+      this._urbListener = dojo.hitch(this, this.notifyClients);
     }
     return this._urbListener; 
   },
-  /**
-   * Notify connected clients
-   *
-   * @param {Object} message {@link Message}
-   */
-  notifyClients: function (message) {
+  notifyClients: function (event) {
     for (var i in this._clients) {
-      this._clients[i].send(message);
+      this._clients[i].send(event);
     }
   },
-  /**
-   * When a remote client connects keep track of it and notify listeners.
-   *
-   * @param {ApiClientProxy} client A Proxy for the remote ApiClient
-   */
   onClientConnect: function (client) {
     // Send over current state
-    client.send({kind: 'urb',
-                 data: this.urb.toDict()});
-    var devices = this.urb.devices()
-    for (var d in devices) {
-      client.send({kind: 'event',
-                   data: {topic: [this.urb.id(),
-                                  'urb/deviceAdded'],
-                          data: devices[d].toDict()}
-                   });
-    }
+    client.send({topic: 'urbAdded',
+                 emitter: client.id(),
+                 data: this.urb});
     this._clients.push(client);
-    client.send({kind: 'event',
-                 data: {topic: ['server/clientReady'],
-                        data: ''}});
-    this.notifyListeners({topic: ['server/clientConnect'],
-                          data: client.id()});
+    client.on('message', dojo.hitch(this, this.onClientMessage, client));
+    this.emit('clientConnect', client);
   },
   /**
    * Handle messages from the remote client.
@@ -1046,9 +880,10 @@ extend(ApiServer.prototype, {
    * @param {ApiClientProxy} client A Proxy for the remote ApiClient
    */
   onClientMessage: function (message, client) {
-    if (message.kind == 'rpc') {
-      this.notifyListeners({topic: ['server/rpc'], data: message.data});
+    if (message.topic == 'rpc') {
       this.onRpc(message.data, client);
+    } else {
+      this.emit('event', message);
     }
   },
   /**
@@ -1060,8 +895,7 @@ extend(ApiServer.prototype, {
     for (var i in this._clients) {
       if (this._clients[i] === client) {
         this._clients.splice(i, 1);
-        this.notifyListeners({topic: ['server/clientDisconnect'],
-                              data: client.id()});
+        this.emit('clientDisconnect', client);
         break;
       }
     }
@@ -1077,21 +911,18 @@ extend(ApiServer.prototype, {
    * @param {ApiClientProxy} client A Proxy for a remote ApiClient.
    */
   onRpc: function (rpc, client) {
+    if (rpc.id == this.urb.id()) {
+      this.urb[rpc.method].apply(this.urb, rpc.args);
+      return;
+    }
     var devices = this.urb.devices();
     for (var d in devices) {
       if (rpc.id == devices[d].id()) {
         devices[d][rpc.method].apply(devices[d], rpc.args);
+        return;
       }
     }
   },
-  /**
-   * Forwards Events from the Urbs and Devices to remote ApiClients
-   *
-   * @param {Object} event {@link Event}
-   */ 
-  onEvent: function (event) {
-    this.notifyClients({kind: 'event', data: event});
-  }
 });
 
 
@@ -1099,61 +930,37 @@ extend(ApiServer.prototype, {
  * @class Accepts connections from remote devices and publishes them locally
  * @param {Urb} An Urb instance through which to publish the devices
  */
-var DeviceServer = function (kind, name, urb) {
-  Evented.call(this, kind, name);
-  this.urb = urb;
-  this._clients = {};
-  this.transport = null;
-};
-inherit(DeviceServer, Evented);
-/** @lends DeviceServer */
-extend(DeviceServer.prototype, {
-  listen: function(transport) {
-    this.transport = transport;
-    this.transport.listen(this);
-  },
-  close: function () {
-    if (this.transport) {
-      this.transport.close();
-      this.transport = null;
-    }
+var DeviceServer = dojo.declare('DeviceServer', Server, {
+  constructor: function (name, protocol, urb) {
+    this.urb = urb;
+    this._clients = {};
   },
   onClientConnect: function (client) {
     this._clients[client.id()] = [];
-    this.notifyListeners({topic: ['deviceserver/clientConnect'],
-                          data: client.id()});
+    client.on('event', dojo.hitch(this, this.onClientMessage, client));
+    this.emit('clientConnected', client);
   },
   onClientDisconnect: function (client) {
     for (var i in this._clients[client.id()]) {
       this.urb.removeDevice(this._clients[client.id()][i]);
     }
     delete this._clients[client.id()];
-    this.notifyListeners({topic: ['deviceserver/clientDisconnect'],
-                          data: client.id()});
+    this.emit('clientDisconnected', client);
   },
-  onClientMessage: function (message, client) {
-    if (message.kind == 'device') {
-      this.onDevice(message.data, client);
-    } else if (message.kind == 'event') {
-      this.onEvent(message.data);
+  onClientMessage: function (client, message) {
+    if (message.topic == 'deviceAdded') {
+      this.onDeviceAdded(message.data, client);
     }
+    this.emit('event', message);
   },
-  onDevice: function (device, client) {
-    //sys.puts(sys.inspect(device));
-    var proxy = new DeviceProxy(device.kind, 
-                                device.name,
+  onDeviceAdded: function (device, client) {
+    var proxy = new DeviceProxy(device.name, 
                                 device.properties,
+                                device.kind,
                                 client);
-    this.addListener(new Listener(new RegExp(proxy.id()),
-                                  curry(proxy.onEvent, proxy)));
     this._clients[client.id()].push(proxy);
     this.urb.addDevice(proxy);
-    this.notifyListeners({topic: ['deviceserver/deviceAdded'],
-                          data: proxy.id()});
   },
-  onEvent: function (event) {
-    this.notifyListeners(event);
-  }
 });
 
 
@@ -1170,24 +977,24 @@ inherit(ExampleDevice, Device);
 
 /** Transport implementations */
 
-var DirectClientTransport = function (serverTransport) {
-  ClientTransport.call(this)
-  this.serverTransport = serverTransport;
+var DirectClientProtocol = function (serverProtocol) {
+  ClientProtocol.call(this)
+  this.serverProtocol = serverProtocol;
   this._client = null;
 }
-inherit(DirectClientTransport, ClientTransport);
-extend(DirectClientTransport.prototype, {
+inherit(DirectClientProtocol, ClientProtocol);
+extend(DirectClientProtocol.prototype, {
   connect: function (callbackObj) {
-    ClientTransport.prototype.connect.call(this, callbackObj);
-    this.serverTransport.onClientConnect(this._transportClient());
+    ClientProtocol.prototype.connect.call(this, callbackObj);
+    this.serverProtocol.onClientConnect(this._transportClient());
     this.onConnect();
   },
   close: function () {
-    this.serverTransport.onClientDisconnect(this._transportClient());
+    this.serverProtocol.onClientDisconnect(this._transportClient());
     this.onDisconnect();
   },
   send: function (message) {
-    this.serverTransport.onClientMessage(this.serializeMessage(message),
+    this.serverProtocol.onClientMessage(this.serializeMessage(message),
                                          this._transportClient());
   },
   _transportClient: function () {
@@ -1202,23 +1009,6 @@ extend(DirectClientTransport.prototype, {
 
 
 
-
-/**
- * @constructor
- */
-var Client = function () {
-  Evented.apply(this, arguments);
-};
-inherit(Client, Evented);
-extend(Client.prototype, {
-  send: function (message) {
-    // Not Implemented
-  }
-});
-
-
-
-
 if (typeof exports === 'undefined') {
   /** @namespace Holds exports */
   exports = {};
@@ -1229,18 +1019,19 @@ exports.extend = extend;
 exports.inherit = inherit;
 exports.clone = clone;
 
-exports.Evented = Evented;
-exports.Listener = Listener;
-exports.Connection = Connection;
-exports.ClientTransport = ClientTransport;
-exports.ServerTransport = ServerTransport;
+exports.EventEmitter = EventEmitter;
+exports.ClientProtocol = ClientProtocol;
+exports.ServerProtocol = ServerProtocol;
 exports.StringProtocol = StringProtocol;
 
 exports.Device = Device;
 exports.Urb = Urb;
 
 exports.ExampleDevice = ExampleDevice;
-exports.DirectClientTransport = DirectClientTransport;
+exports.DirectClientProtocol = DirectClientProtocol;
+
+exports.Client = Client;
+exports.Server = Server;
 
 exports.ApiServer = ApiServer;
 //exports.WebServer = WebServer;
