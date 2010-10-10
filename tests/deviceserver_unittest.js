@@ -1,6 +1,6 @@
 var dojo = require('dojo');
 var jsmock = require('jsmock');
-var test = require('test');
+var test = require('urb/test');
 var unittest = require('unittest');
 
 var urb = require('urb');
@@ -12,7 +12,7 @@ var DeviceServerTestCase = dojo.declare(test.BaseTestCase, {
     var server = new urb.DeviceServer('example', protocol, hub);
     var client = new urb.Client('name', new urb.ClientProtocol());
 
-    var device = new urb.ExampleDevice('example1');
+    var device = new urb.Device('example1', {state: 0});
     this.assertEqual(hub.devices().length, 0);
     protocol.emit('clientConnect', client);
     client.emit('deviceAdded', device.toDict());

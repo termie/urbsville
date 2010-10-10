@@ -1,5 +1,5 @@
 require.paths.unshift('./third_party/');
-require.paths.unshift('./public/js');
+//require.paths.unshift('./public/js');
 require.paths.unshift('./third_party/node-dojo/');
 require.paths.unshift('./third_party/node_mDNS/')
 require.paths.unshift('./third_party/node-unittest/lib')
