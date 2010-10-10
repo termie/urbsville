@@ -1,6 +1,6 @@
 var dojo = require('dojo');
 var jsmock = require('jsmock');
-var test = require('test');
+var test = require('urb/test');
 var unittest = require('unittest');
 
 var urb = require('urb');
@@ -11,8 +11,8 @@ var ApiServerTestCase = dojo.declare(test.BaseTestCase, {
     var protocol = new urb.ServerProtocol();
     var server = new urb.ApiServer('example', protocol, hub);
 
-    var device = new urb.ExampleDevice('example1');
-    var device2 = new urb.ExampleDevice('example2');
+    var device = new urb.Device('example1', {state: 0});
+    var device2 = new urb.Device('example2', {state: 0});
 
     var clientProto = new urb.ClientProtocol();
     var client = new urb.Client('name', clientProto);

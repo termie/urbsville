@@ -1,7 +1,7 @@
 var sys = require('sys');
 var dojo = require('dojo');
 var jsmock = require('jsmock');
-var test = require('test');
+var test = require('urb/test');
 
 var urb = require('urb');
 

@@ -1,15 +1,21 @@
 require.paths.unshift('./third_party/');
-require.paths.unshift('./public/js');
+//require.paths.unshift('./public/js');
 require.paths.unshift('./third_party/node-static/lib/');
 require.paths.unshift('./third_party/node.routes.js/');
 require.paths.unshift('./third_party/node_mDNS/');
 require.paths.unshift('./third_party/node-dojo/');
 require.paths.unshift('./lib');
+
 var http = require('http');
 var sys = require('sys');
 var urb = require('urb');
-var urb_node = require('urb-node');
-// should import the one from third_party
+//var urb_node = require('urb-node');
+
+var sioServer = require('urb/protocol/sioServer');
+var api = require('urb/api');
+var device = require('urb/device');
+  
+
 var io = require('Socket.IO-node');
 var static = require('node-static');
 var routes = require('routes');
@@ -57,18 +63,19 @@ var webServer = http.createServer(function (request, response) {
   routes.route(request, response, urls);
 });
 
+
 var hub = new urb.Urb('hub');
 
-var sioProtocol = new urb_node.SioServerProtocol(
+var sioProtocol = new sioServer.SioServerProtocol(
     8001, null, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'jsonp-polling']});
-var sioApiServer = new urb.ApiServer('sio', sioProtocol, hub);
+var sioApiServer = new api.ApiServer('sio', sioProtocol, hub);
 
 //var tcpProtocol = new urb_node.TcpServerProtocol(9001, '127.0.0.1');
 //var tcpApiServer = new urb.ApiServer('tcp', tcpProtocol, hub);
 
-var sioDeviceProtocol = new urb_node.SioServerProtocol(
+var sioDeviceProtocol = new sioServer.SioServerProtocol(
     8000, webServer, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling']});
-var sioDeviceServer = new urb.DeviceServer('sio', sioDeviceProtocol, hub);
+var sioDeviceServer = new device.DeviceServer('sio', sioDeviceProtocol, hub);
 
 //sioApiServer.on('event', function (event) { 
 //    sys.puts('sio ' + sys.inspect(event));

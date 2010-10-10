@@ -1,6 +1,6 @@
 var dojo = require('dojo');
 var jsmock = require('jsmock');
-var test = require('test');
+var test = require('urb/test');
 var unittest = require('unittest');
 
 var urb = require('urb');
