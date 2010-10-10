@@ -1,5 +1,4 @@
 require.paths.unshift('./third_party/');
-//require.paths.unshift('./public/js');
 require.paths.unshift('./third_party/node-static/lib/');
 require.paths.unshift('./third_party/node.routes.js/');
 require.paths.unshift('./third_party/node_mDNS/');
@@ -8,6 +7,7 @@ require.paths.unshift('./lib');
 
 var http = require('http');
 var sys = require('sys');
+var fs = require('fs');
 var urb = require('urb');
 //var urb_node = require('urb-node');
 
@@ -47,7 +47,13 @@ function render_js3d(request, response) {
 }
 
 function render_static(request, response, file) {
-  fileServer.serveFile(file, 200, {}, request, response);
+  try {
+    fs.statSync('./public/' + file).isFile();
+    var e = fileServer.serveFile(file, 200, {}, request, response);
+  } catch (e) {
+    response.writeHead('404');
+    response.end();
+  }
 }
 
 var urls = [

@@ -1,4 +1,5 @@
 
+
 var BrowserDevice = dojo.declare('BrowserDevice', Device, {
   constructor: function (name, defaults) {
     this.on('property/bgcolor', this.bgcolorListener());
