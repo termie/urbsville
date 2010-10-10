@@ -112,11 +112,11 @@ EventEmitter.prototype.emit = function (type) {
   if (!this._events[type]) return false;
 
   if (typeof this._events[type] == 'function') {
-    if (arguments.length < 3) {
+    if (arguments.length < 2) {
       // fast case
       this._events[type].call( this
                              , arguments[1]
-                             , arguments[2]
+                             //, arguments[2]
                              );
     } else {
       // slower

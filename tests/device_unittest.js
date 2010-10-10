@@ -1,21 +1,12 @@
 var sys = require('sys');
-
+var dojo = require('dojo');
 var jsmock = require('jsmock');
-var unittest = require('unittest');
+var test = require('test');
 
 var urb = require('urb');
 
-var Tester = {f: function () {}};
 
-var DeviceTestCase = function () { unittest.TestCase.apply(this, arguments); };
-sys.inherits(DeviceTestCase, unittest.TestCase);
-DeviceTestCase.prototype.extend({
-  setUp: function () {
-    this.mock = new jsmock.MockControl();
-  },
-  tearDown: function () {
-    this.mock.verify();
-  },
+var DeviceTestCase = dojo.declare(test.BaseTestCase, {
   testBasic: function () {
     var dev = new urb.Device('name', {foo: 'bar'});
     this.assertEqual(dev.kind(), 'Device');
@@ -25,16 +16,19 @@ DeviceTestCase.prototype.extend({
   },
   testProperties: function () {
     var dev = new urb.Device('name', {foo: 'bar', baz: 'baq'});
-    var tester = this.mock.createMock(Tester);
     
     this.assertEqual(dev.get('foo'), 'bar');
     this.assertEqual(dev.get('baz'), 'baq');
     this.assertThrows(function () { dev.set('not_there', 'foo')});
    
-    tester.expects().f(1);
-    tester.expects().f(2);
-    dev.on('propertyChanged', function () { tester.f(1) });
-    dev.on('property/foo', function () { tester.f(2) });
+    
+    var expected = this.expectListener(jsmock.isA(Object));
+    var expected2 = this.expectListener('bla');
+    var listener3 = this.matchObject({properties: {foo: 'bla'}})
+
+    dev.on('propertyChanged', expected.f);
+    dev.on('propertyChanged', listener3);
+    dev.on('property/foo', expected2.f);
 
     dev.set('foo', 'bla');
     this.assertEqual(dev.get('foo'), 'bla');

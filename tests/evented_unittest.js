@@ -1,55 +1,45 @@
 var sys = require('sys');
-
+var dojo = require('dojo');
 var jsmock = require('jsmock');
-var unittest = require('unittest');
+var test = require('test');
 
 var urb = require('urb');
 
-var EventedTestCase = function () { unittest.TestCase.apply(this, arguments); };
-sys.inherits(EventedTestCase, unittest.TestCase);
-EventedTestCase.prototype.extend({
-  setUp: function () {
-    this.mock = new jsmock.MockControl();
-  },
-  tearDown: function () {
-    this.mock.verify();
-  },
+var EventEmitterTestCase = dojo.declare(test.BaseTestCase, {
   testBasic: function () {
-    var evented = new urb.Evented('kind', 'name');
-    this.assertEqual(evented.kind(), 'kind');
+    var evented = new urb.EventEmitter('name');
+    this.assertEqual(evented.kind(), 'EventEmitter');
     this.assertEqual(evented.name(), 'name');
-    this.assertEqual(evented.id(), 'kind/name');
+    this.assertEqual(evented.id(), 'EventEmitter/name');
   },
   testAddRemoveListener: function () {
-    var listener = new urb.Listener();
-    var listener2 = new urb.Listener();
+    var evented = new urb.EventEmitter('name');
+    var listener = function () {};
+    var listener2 = function () {};
 
-    var evented = new urb.Evented();
+    this.assertEqual(evented.listeners('foo').length, 0);
+    evented.on('foo', listener);
+    evented.on('foo', listener2);
+    this.assertEqual(evented.listeners('foo').length, 2);
 
-    this.assertEqual(evented.listeners().length, 0);
-    evented.addListener(listener);
-    evented.addListener(listener2);
-    this.assertEqual(evented.listeners().length, 2);
-
-    evented.removeListener(listener);
-    this.assertNotEqual(evented.listeners()[0], listener)
-    this.assertStrictEqual(evented.listeners()[0], listener2)
-    this.assertEqual(evented.listeners().length, 1);
+    evented.removeListener('foo', listener);
+    this.assertEqual(evented.listeners('foo').length, 1);
+    this.assertNotEqual(evented.listeners('foo')[0], listener)
+    this.assertStrictEqual(evented.listeners('foo')[0], listener2)
   },
   testNotifyListeners: function () {
-    var listener = this.mock.createMock(urb.Listener);
-    var listener2 = this.mock.createMock(urb.Listener);
-    var evented = new urb.Evented('kind', 'name');
-      
-    evented.addListener(listener);
-    evented.addListener(listener2);
+    var evented = new urb.EventEmitter('name');
 
-    listener.expects().match(['kind/name', 'some_topic']).andReturn(true);
-    listener.expects().send(jsmock.isA(Object));
-
-    listener2.expects().match(['kind/name', 'some_topic']).andReturn(false);
-  
-    evented.notifyListeners({topic: ['some_topic']});
+    var expected = this.expectListener(jsmock.isA(Object));
+    var expected2 = this.expectListener('bar');
+    var listener3 = this.matchObject({topic: 'foo',
+                                      emitter: evented.id(),
+                                      data: 'bar'});
+    
+    evented.on('event', expected.f);
+    evented.on('foo', expected2.f);
+    evented.on('event', listener3);
+    evented.emit('foo', 'bar');
   },
 });
-exports.EventedTestCase = EventedTestCase;
+exports.EventEmitterTestCase = EventEmitterTestCase;

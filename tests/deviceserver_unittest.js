@@ -12,7 +12,8 @@ sys.inherits(DeviceServerTestCase, unittest.TestCase);
 DeviceServerTestCase.prototype.extend({
   setUp: function () {
     this.mock = new jsmock.MockControl();
-    this.fakeClient = {id: function () { return 'client/what'; }};
+    
+    
     this.urbber = new urb.Urb('urb', 'urb1');
     this.device = new urb.ExampleDevice('example1');
   },
@@ -20,7 +21,10 @@ DeviceServerTestCase.prototype.extend({
     this.mock.verify();
   },
   testBasic: function () {
-    var server = new urb.DeviceServer('example', this.urbber);
+    var protocol = new urb.ServerProtocol();
+    var server = new urb.DeviceServer('example', protocol, this.urbber);
+    
+    
 
     this.assertEqual(this.urbber.devices().length, 0);
     server.onClientConnect(this.fakeClient);
