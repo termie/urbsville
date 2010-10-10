@@ -842,7 +842,6 @@ var DeviceClient = dojo.declare('DeviceClient', Client, {
   },
 });
 
-
 /** Server-side */
 
 /**
@@ -872,7 +871,7 @@ var ApiServer = dojo.declare('ApiServer', Server, {
                  emitter: client.id(),
                  data: this.urb});
     this._clients.push(client);
-    client.on('message', dojo.hitch(this, this.onClientMessage, client));
+    client.on('event', dojo.hitch(this, this.onClientMessage, client));
     this.inherited(arguments);
   },
   /**
@@ -883,7 +882,7 @@ var ApiServer = dojo.declare('ApiServer', Server, {
    * @param {Object} message {@link Message}
    * @param {ApiClientProxy} client A Proxy for the remote ApiClient
    */
-  onClientMessage: function (message, client) {
+  onClientMessage: function (client, message) {
     if (message.topic == 'rpc') {
       this.onRpc(message.data, client);
     } else {
@@ -974,7 +973,10 @@ var DeviceServer = dojo.declare('DeviceServer', Server, {
  * @constructor
  */
 var ExampleDevice = dojo.declare('ExampleDevice', Device, {
-  _properties: {'state': 0},
+  constructor: function (name, defaults) {
+    var properties = {state: 0};
+    this._properties = dojo.mixin(properties, defaults);
+  }
 });
 
 /** Transport implementations */

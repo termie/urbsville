@@ -10,6 +10,7 @@ require.paths.unshift('./tests')
 var unittest = require('unittest');
 
 //var core_unittest = require('core_unittest');
+var apiserver_unittest = require('apiserver_unittest');
 var device_unittest = require('device_unittest');
 var deviceserver_unittest = require('deviceserver_unittest');
 var evented_unittest = require('evented_unittest');
@@ -18,6 +19,7 @@ var server_unittest = require('server_unittest');
 //var tcptransport_test = require('tcptransport_test');
 
 unittest.run([
+  apiserver_unittest,
   //core_unittest,
   device_unittest,
   deviceserver_unittest,
