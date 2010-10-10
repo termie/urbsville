@@ -384,9 +384,9 @@ var Meta = dojo.declare('Meta', null, {
 var Server = dojo.declare('Server', EventEmitter, {
   constructor: function (name, protocol) {
     this.protocol = protocol;
-    this.protocol.on('clientConnected',
+    this.protocol.on('clientConnect',
                      dojo.hitch(this, this.onClientConnect));
-    this.protocol.on('clientDisconnected',
+    this.protocol.on('clientDisconnect',
                      dojo.hitch(this, this.onClientDisconnect));
   },
   listen: function () {
@@ -395,8 +395,12 @@ var Server = dojo.declare('Server', EventEmitter, {
   close: function () {
     this.protocol.close();
   },
-  onClientConnect: function (client) { },
-  onClientDisconnect: function (client) { },
+  onClientConnect: function (client) {
+    this.emit('clientConnect', client);
+  },
+  onClientDisconnect: function (client) { 
+    this.emit('clientDisconnect', client);
+  },
 });
 
 var Client = dojo.declare('Client', EventEmitter, {
@@ -869,7 +873,7 @@ var ApiServer = dojo.declare('ApiServer', Server, {
                  data: this.urb});
     this._clients.push(client);
     client.on('message', dojo.hitch(this, this.onClientMessage, client));
-    this.emit('clientConnect', client);
+    this.inherited(arguments);
   },
   /**
    * Handle messages from the remote client.
@@ -895,10 +899,10 @@ var ApiServer = dojo.declare('ApiServer', Server, {
     for (var i in this._clients) {
       if (this._clients[i] === client) {
         this._clients.splice(i, 1);
-        this.emit('clientDisconnect', client);
         break;
       }
     }
+    this.inherited(arguments);
   },
   /**
    * Handle an RPC call from an ApiClient.
@@ -949,11 +953,11 @@ var DeviceServer = dojo.declare('DeviceServer', Server, {
   },
   onClientMessage: function (client, message) {
     if (message.topic == 'deviceAdded') {
-      this.onDeviceAdded(message.data, client);
+      this.onDevice(message.data, client);
     }
     this.emit('event', message);
   },
-  onDeviceAdded: function (device, client) {
+  onDevice: function (device, client) {
     var proxy = new DeviceProxy(device.name, 
                                 device.properties,
                                 device.kind,
@@ -969,11 +973,9 @@ var DeviceServer = dojo.declare('DeviceServer', Server, {
 /**
  * @constructor
  */
-var ExampleDevice = function (name, properties) {
-  this._properties = {'state': 0};
-  Device.call(this, 'ExampleDevice', name, properties);
-};
-inherit(ExampleDevice, Device);
+var ExampleDevice = dojo.declare('ExampleDevice', Device, {
+  _properties: {'state': 0},
+});
 
 /** Transport implementations */
 
