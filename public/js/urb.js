@@ -6,25 +6,22 @@ urb = {};
 
 // emulate commonJS require
 function require(s) {
-  console.log('requiring: ' + s);
   if (s == 'dojo') {
     return dojo;
   }
 
-  var s = s.replace('/', '.');
+  var s = s.replace(/\//g, '.');
 
   var parts = s.split('.').slice(1);
    
   
   if (parts.length == 1) {
     if (urb[parts[0]]) {
-      console.log('returning ' + parts[0]);
       return urb[parts[0]];
     }
   } else if (parts.length == 2) {
     if (urb[parts[0]]) {
       if (urb[parts[0]][parts[1]]) {
-        console.log('returning ' + parts[0] + '.' + parts[1]);
         return urb[parts[0]][parts[1]];
       }
     }
@@ -42,5 +39,3 @@ function require(s) {
 }
 
 var foo = require('urb.index');
-console.log('index loaded');
-

@@ -1,0 +1,202 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"> 
+ 
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"> 
+<head> 
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/> 
+	<link href="http://fonts.googleapis.com/css?family=Molengo&amp;subset=latin" rel="stylesheet" type="text/css" /> 
+    <link rel="stylesheet" media="all" href="./public/css/main.css" /> 
+    <meta name="viewport" content="width=device-width" /> 
+	<title>Urbsville</title>	
+</head> 
+ 
+<body> 
+<div id="header"> 
+    <a href="./" id="logo"><em>Urb</em>a<span>node</span></a> 
+</div> 
+<div id="content">
+    <div class="slider" id="pan-slider"> 
+        <a href="#" class="ui-slider-handle" id="handle-1"></a> 
+    </div> 
+ 
+    <div class="slider vertical" id="tilt-slider"> 
+        <a href="#" class="ui-slider-handle" id="handle-2"></a> 
+    </div> 
+</div> 
+ 
+<script type="text/javascript" src="/public/js/jquery.js"></script>
+<script src="/public/js/dojo.js"></script>
+<script src="/public/js/socket.io.js"></script>
+<script>io.setPath('/public/js/');</script>
+<script src="/public/js/urb.js"></script>
+
+<script type="text/javascript" src="/public/js/raphael.js"></script> 
+<script type="text/javascript" src="/public/js/colorwheel.js"></script> 
+<style type="text/css"> 
+    #pan-slider {
+        position: absolute;
+        top: 350px;
+    }
+ 
+    #tilt-slider {
+        position: absolute;
+        right: 10px;
+        top: 75px;
+    }
+</style> 
+<script type="text/javascript"> 
+$.fn.slider = function (callback, vertical) {
+  var cont = this;
+  var max = vertical ? cont.height() : cont.width();
+  var min = 0.0;
+
+  var el = cont.find("a");
+  var pos = [el.offset().left, el.offset().top];
+  var origin = [el.offset().left, el.offset().top];
+
+  var round = function (x) {
+    return Math.round(x*Math.pow(10, 2))/Math.pow(10, 2);
+  }
+
+  var startDrag = function (e) {
+    if (e.type === "touchstart") {
+      el.addClass("active");
+      var _el = el.get(0);
+      _el.onmousedown = null;
+      _el.ontouchmove = moveDrag;
+      _el.ontouchend = function () {
+        el.removeClass("active");
+        _el.ontouchmove = null;
+        _el.ontouchend = null;
+        _el.ontouchstart = startDrag;
+      }
+    } else {
+      el.addClass("active");
+      document.onmousemove = moveDrag;
+      document.onmouseup = function () {
+        el.removeClass("active");
+        document.onmousemove = null;
+        document.onmouseup = null;
+      }
+    }
+    e.preventDefault();
+    return false;
+  };
+
+  var moveDrag = function (e) {
+    var x = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
+    var y = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
+    var val = vertical ? y-cont.offset().top : x-cont.offset().left;
+    if (val >= min && val <= max) {
+      if (vertical)
+        el.css({top: val + "px"});
+      else
+        el.css({left: val + "px"});
+      if (callback) callback(round(val/max));
+    }
+    e.preventDefault();
+    return false;
+  };
+  cont.click(function (e) {
+      var x = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
+      var y = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
+      var val = vertical ? y-cont.offset().top : x-cont.offset().left;
+      if (val >= min && val <= max) {
+      if (vertical)
+      el.css({top: val + "px"});
+      else
+      el.css({left: val + "px"});
+      if (callback) callback(round(val/max));
+      }
+  });
+  el.get(0).onmousedown = el.get(0).ontouchstart = startDrag;
+};
+
+$.fn.updateColor = function (color, callback) {
+  var update = false;
+  var el = this.get(0);
+
+  this.click(function () {
+      colorCallback(color.toString().toUpperCase());
+      });
+
+  el.onmousedown = el.ontouchstart = function () { update = true; };    
+  el.onmouseup = el.ontouchend = function () { update = false; };    
+  el.onmousemove = el.ontouchmove = function () {
+    colorCallback(color.toString().toUpperCase());
+  };
+};
+
+function panCallback(value) {
+  $("#pan-value").html(value);
+}
+
+function tiltCallback(value) {
+  $("#tilt-value").html(value);        
+}
+
+function colorCallback(value) {
+  var c = "#" + value;
+  $("#color-value").html(c).css({color : c});        
+}
+
+gCanvas = null;
+function newDevice(device) {
+  var xOffset = client.urb.devices().length * 15;
+  var circle = gCanvas.circle(xOffset, 20, 15);
+  circle.attr('fill', device.get('bgcolor')); 
+  circle.attr('href', 'javascript:setCurrent("' + device.id() + '")');
+
+  device.circle = circle;
+  device.on('property/bgcolor', function (color) {
+    circle.attr('fill', color);
+  });
+}
+function setCurrent(deviceId) {
+  gCurrentDevice = client.urb.device(deviceId);
+}
+
+gCurrentDevice = null;
+
+var sioClient = require('urb/protocol/sioClient');
+var api = require('urb/api');
+
+var protocol = new sioClient.SioClientProtocol('localhost', {port: 8001});
+var client = new api.ApiClient('admin', protocol);
+
+client.on('urbAdded', function (urb) {
+  var devices = urb.devices();
+  for (var d in devices) {
+    newDevice(devices[d]);
+  }
+  urb.on('deviceAdded', function (device) {
+    newDevice(device);
+  });
+});
+client.connect();
+
+$(window).load(function () {
+  gCanvas = Raphael(20, 5, 300, 75);
+
+  var reg = /^#(.)\1(.)\2(.)\3$/;
+  var cp = Raphael.colorwheel(20, 75, 240, "#eee");
+
+  cp.onchange = function (clr) {
+    //out.value = clr.replace(reg, "#$1$2$3");
+    //cp.color(clr);
+    if (gCurrentDevice) {
+      console.log('color! ' + clr);
+      gCurrentDevice.set('bgcolor', clr);
+    }
+    //out.style.background = clr;
+    //out.style.color = Raphael.rgb2hsb(clr).b < .5 ? "#fff" : "#000";
+  };
+
+  $("#pan-slider").slider(panCallback);
+  $("#tilt-slider").slider(tiltCallback, true);
+});
+window.top.scrollTo(0, 1);
+</script> 
+</body> 
+</html> 
+

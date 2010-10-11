@@ -30,6 +30,7 @@ var dojo = require('dojo');
  */
 
 var fileServer = new static.Server('./public');
+var urbServer = new static.Server('./lib/urb');
 var viewServer = new static.Server('./views');
 
 function render_admin(request, response) {
@@ -42,8 +43,22 @@ function render_device(request, response) {
   viewServer.serveFile('device.html', 200, {}, request, response);
 }
 
+function render_raph(request, response) {
+  viewServer.serveFile('raph.html', 200, {}, request, response);
+}
+
 function render_js3d(request, response) {
   viewServer.serveFile('js3d.html', 200, {}, request, response);
+}
+
+function render_urb(request, response, file) {
+  try {
+    fs.statSync('./lib/urb/' + file).isFile();
+    var e = urbServer.serveFile(file, 200, {}, request, response);
+  } catch (e) {
+    response.writeHead('404');
+    response.end();
+  }
 }
 
 function render_static(request, response, file) {
@@ -60,7 +75,9 @@ var urls = [
   ['^/admin$', render_admin],
   ['^/30seconds$', render_device],
   ['^/js3d$', render_js3d],
+  ['^/raph$', render_raph],
   ['^/$', render_index],
+  ['^/public/urb/(.*)$', render_urb],
   ['^/public/(.*)$', render_static]
 ];
 
