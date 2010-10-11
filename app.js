@@ -1,13 +1,14 @@
 require.paths.unshift('./third_party/');
 require.paths.unshift('./third_party/node-static/lib/');
 require.paths.unshift('./third_party/node.routes.js/');
-require.paths.unshift('./third_party/node_mDNS/');
+require.paths.unshift('./third_party/node_mdns/lib');
 require.paths.unshift('./third_party/node-dojo/');
 require.paths.unshift('./lib');
 
 var http = require('http');
 var sys = require('sys');
 var fs = require('fs');
+var mdns = require('mdns');
 var urb = require('urb');
 //var urb_node = require('urb-node');
 
@@ -128,3 +129,9 @@ sioDeviceServer.listen();
 //      dev.setProperty('state', 1);
 //    }
 //}, 10000);
+//
+
+
+// Advertise our service
+var ad = mdns.createAdvertisement('urbanode-web', 8000);
+ad.start()

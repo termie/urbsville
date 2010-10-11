@@ -1,10 +1,10 @@
 jsl=jsl
 jsdoc=tools/jsdoc-toolkit
 
-build: third_party/node-unittest/README.rst third_party/node_mDNS/binding.node public/js/socket.io.js public/js/jquery.js
+build: third_party/node-unittest/README.rst third_party/node_mdns/lib/binding.node public/js/socket.io.js public/js/jquery.js
 
-third_party/node_mDNS/binding.node: 
-	cd third_party/node_mDNS && node-waf configure build
+third_party/node_mdns/lib/binding.node: 
+	cd third_party/node_mdns && node-waf configure build
 
 public/js/socket.io.js: third_party/Socket.IO/socket.io.js
 	ln -f third_party/Socket.IO/socket.io.js public/js

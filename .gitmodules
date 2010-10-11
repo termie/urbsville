@@ -19,3 +19,6 @@
 [submodule "third_party/node.routes.js"]
 	path = third_party/node.routes.js
 	url = http://github.com/defrex/node.routes.js.git
+[submodule "third_party/node_mdns"]
+	path = third_party/node_mdns
+	url = http://github.com/agnat/node_mdns.git
