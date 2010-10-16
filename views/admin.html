@@ -2,20 +2,30 @@
 "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html>
 <head>
-<script src="/public/js/jquery.js"></script>
-<script type="text/javascript" src="/public/js/json.js"></script>
-<script src="/public/js/socket.io.js"></script>
-<script>io.setPath('/public/js/');</script>
-<script src="/public/js/urb.js"></script>
-<script src="/public/js/urb-socketio.js"></script>
-<title>Urbsville</title>
-<link rel="stylesheet" media="all" href="/public/css/main.css" />
+    <script type="text/javascript" src="/public/js/jquery.js"></script>
+    <script type="text/javascript" src="/public/js/json.js"></script>
+    <script type="text/javascript" src="/public/js/socket.io.js"></script>
+    <script type="text/javascript">io.setPath('/public/js/');</script>
+    <script type="text/javascript" src="/public/js/urb.js"></script>
+    <script type="text/javascript" src="/public/js/urb-socketio.js"></script>
+    <title>Admin - Urbsville</title>
+    <link href="http://fonts.googleapis.com/css?family=Molengo&amp;subset=latin" rel="stylesheet" type="text/css" /> 
+    <link rel="stylesheet" media="all" href="/public/css/main.css" />
 </head>
 <body>
-<h1>Admin</h1>
-<div id="devices">
-
-</div>
+    <div id="header"> 
+        <a href="./" id="logo"><em>Urb</em>a<span>node</span></a> 
+    </div>
+    <div id="content">
+        <h1>Admin</h1>
+        <ul class="list" id="devices">
+            <li>No devices here</li>
+            <!--li style="background: green;"> 
+                <h3>termie</h3> 
+                <p>Color: <strong>green</strong> | Pan: <strong>0.2</strong> | Tilt: <strong>0.2</strong></p> 
+                <a href="#" class="delete">Release</a> 
+            </li-->
+        </ul>
 
 <script type="text/javascript">
   var client = new ApiClient('ApiClient', 'admin');
@@ -25,9 +35,11 @@
 
   client.addListener(new Listener(/deviceAdded/, function (evt) {
     var device = evt.data;
-    $('#devices').append('<div id="device' + device.name + '" class="device">'
-                         + device.id
-                         + '</div');
+    $('#devices').append('<li id="device' + device.name + '" class="device">'
+                         + '<h3>' + device.id + '</h3>'
+                         //+ '<h3>' + device.getMeta('user') + '</h3>'
+                         //+ '<p> color: | pan: | title: </p>'
+                         + '</li');
     $('#device' + device.name).toggle(function () {
       client.urb.device(device.id).set('bgcolor', "#000");
     }, function () {
