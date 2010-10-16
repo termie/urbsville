@@ -176,7 +176,6 @@ client.on('urbAdded', function (urb) {
     newDevice(device);
   });
 });
-client.connect();
 
 $(window).load(function () {
   gCanvas = Raphael(20, 5, 300, 75);
@@ -197,6 +196,8 @@ $(window).load(function () {
 
   $("#pan-slider").slider(panCallback);
   $("#tilt-slider").slider(tiltCallback, true);
+
+  client.connect();
 });
 window.top.scrollTo(0, 1);
 </script> 
