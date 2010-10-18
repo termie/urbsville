@@ -22,13 +22,13 @@ var DeviceTestCase = dojo.declare(test.BaseTestCase, {
     this.assertThrows(function () { dev.set('not_there', 'foo')});
    
     
-    var expected = this.expectListener(jsmock.isA(Object));
-    var expected2 = this.expectListener('bla');
+    var expected = this.expectListener('bla');
+    var expected2 = this.expectListener(jsmock.isA(Object));
     var listener3 = this.matchObject({properties: {foo: 'bla'}})
 
-    dev.on('propertyChanged', expected.f);
+    dev.on('property/foo', expected.f);
+    dev.on('propertyChanged', expected2.f);
     dev.on('propertyChanged', listener3);
-    dev.on('property/foo', expected2.f);
 
     dev.set('foo', 'bla');
     this.assertEqual(dev.get('foo'), 'bla');

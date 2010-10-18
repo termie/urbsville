@@ -168,12 +168,14 @@ function newDevice(device) {
   var xOffset = gCounter * 30 + 15;
   gCounter = gCounter + 1;
   console.log('offset: ' + xOffset);
+  console.log(device.get('rgbhex'));
   var circle = gCanvas.circle(xOffset, 20, 15);
-  circle.attr('fill', device.get('bgcolor')); 
+  var rgbhex = device.get('rgbhex');
+  circle.attr('fill', rgbhex); 
   circle.attr('href', 'javascript:setCurrent("' + device.id() + '")');
 
   device.circle = circle;
-  device.on('property/bgcolor', function (color) {
+  device.on('property/rgbhex', function (color) {
     circle.attr('fill', color);
   });
 }
@@ -206,16 +208,15 @@ $(window).load(function () {
   var cp = Raphael.colorwheel(20, 75, 240, "#eee");
 
   cp.onchange = function (clr) {
-    //out.value = clr.replace(reg, "#$1$2$3");
-    //cp.color(clr);
     var rgb = Raphael.getRGB(clr);
     var cmyk = RGBtoCMYK(rgb.r, rgb.g, rgb.b);
     if (gCurrentDevice) {
-      console.log('color! ' + clr);//, [rgb.r, rgb.g, rgb.b], cmyk);
-      gCurrentDevice.set('bgcolor', clr);
+      // console.log(cmyk);
+      gCurrentDevice.set('rgb', [rgb.r / 255, rgb.g / 255, rgb.b / 255]);
+
+      //console.log('color! ' + clr);//, [rgb.r, rgb.g, rgb.b], cmyk);
+      //gCurrentDevice.set('bgcolor', clr);
     }
-    //out.style.background = clr;
-    //out.style.color = Raphael.rgb2hsb(clr).b < .5 ? "#fff" : "#000";
   };
 
   $("#pan-slider").slider(panCallback);

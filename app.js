@@ -10,11 +10,11 @@ var sys = require('sys');
 var fs = require('fs');
 var mdns = require('mdns');
 var urb = require('urb');
-//var urb_node = require('urb-node');
 
 var sioServer = require('urb/protocol/sioServer');
 var api = require('urb/api');
 var device = require('urb/device');
+var colored = require('urb/devices/colored');
   
 
 var io = require('Socket.IO-node');
@@ -90,6 +90,19 @@ var webServer = http.createServer(function (request, response) {
 
 var hub = new urb.Urb('hub');
 
+// Let's add some colored devices
+var c1 = colored.CmykDevice('c1');
+var c2 = colored.CmykDevice('c2');
+
+
+hub.addDevice(c1);
+hub.addDevice(c2);
+
+hub.on('event', function (event) { console.log(event); });
+
+c1.set('magenta', 1.0);
+c2.set('yellow', 1.0);
+
 var sioProtocol = new sioServer.SioServerProtocol(
     8001, null, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'jsonp-polling']});
 var sioApiServer = new api.ApiServer('sio', sioProtocol, hub);
@@ -101,35 +114,19 @@ var sioDeviceProtocol = new sioServer.SioServerProtocol(
     8000, webServer, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling']});
 var sioDeviceServer = new device.DeviceServer('sio', sioDeviceProtocol, hub);
 
-//sioApiServer.on('event', function (event) { 
-//    sys.puts('sio ' + sys.inspect(event));
-//});
+sioApiServer.on('event', function (event) {
+  console.log('sioa');
+  console.log(event);
+});
 
 sioDeviceServer.on('event', function (event) { 
   console.log('siod');
   console.log(event);
 });
-//tcpApiServer.on('event', function (event) { 
-//    sys.puts('tcp ' + sys.inspect(event));
-//});
-//hub.on('event', function (event) {
-//    sys.puts('hub ' + sys.inspect(event));
-//});
 
 sioApiServer.listen();
 //tcpApiServer.listen();
 sioDeviceServer.listen();
-
-//setInterval(function () {
-//    if (dev.getProperty('state')) {
-//      sys.puts('toggle -> 0');
-//      dev.setProperty('state', 0);
-//    } else {
-//      sys.puts('toggle -> 1');
-//      dev.setProperty('state', 1);
-//    }
-//}, 10000);
-//
 
 
 // Advertise our service

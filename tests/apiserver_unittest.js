@@ -27,15 +27,15 @@ var ApiServerTestCase = dojo.declare(test.BaseTestCase, {
                         data: hub})
     );
     expecter.expects().send(jsmock.isA(Object)).andStub(
-      this.matchObject({topic: 'propertyChanged',
-                        emitter: device.id(),
-                        data: {properties: {state: 1}}})
-
-    );
-    expecter.expects().send(jsmock.isA(Object)).andStub(
       this.matchObject({topic: 'property/state',
                         emitter: device.id(),
                         data: 1})
+
+    );
+    expecter.expects().send(jsmock.isA(Object)).andStub(
+      this.matchObject({topic: 'propertyChanged',
+                        emitter: device.id(),
+                        data: {properties: {state: 1}}})
 
     );
     clientProto.send = expecter.send
