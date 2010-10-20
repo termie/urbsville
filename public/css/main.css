@@ -189,3 +189,89 @@ div.buttons button, div.buttons a.btn {
     right: 0.5em;
     top: 0.5em;
 }
+
+#msg {
+    background-color: rgba(0,0,0,0.9);
+    border: solid 3px rgba(0,0,0,0.8);
+    -webkit-border-radius: 9px;
+    -moz-border-radius: 9px;
+    border-radius: 9px;
+    position: absolute;
+    font-size: 1.2em;
+    display: none;
+    padding: 0;
+    z-index: 10;
+    color: #fff;
+    width: 290px;
+}
+
+#msg p {
+    margin: 1.75em;
+}
+
+#msg.error {
+    color: red;
+}
+
+#loader .b1 {
+  -moz-transform:rotate(0deg) translate(0, -40px);
+  -webkit-transform:rotate(0deg) translate(0, -40px);opacity:0.12;
+}
+#loader .b2 {
+  -moz-transform:rotate(45deg) translate(0, -40px);
+  -webkit-transform:rotate(45deg) translate(0, -40px);opacity:0.25;
+}
+#loader .b3 {
+  -moz-transform:rotate(90deg) translate(0, -40px);
+  -webkit-transform:rotate(90deg) translate(0, -40px);opacity:0.37;
+}
+#loader .b4 {
+  -moz-transform:rotate(135deg) translate(0, -40px);
+  -webkit-transform:rotate(135deg) translate(0, -40px);opacity:0.50;
+}
+#loader .b5 {
+  -moz-transform:rotate(180deg) translate(0, -40px);
+  -webkit-transform:rotate(180deg) translate(0, -40px);opacity:0.62;
+}
+#loader .b6 {
+  -moz-transform:rotate(225deg) translate(0, -40px);
+  -webkit-transform:rotate(225deg) translate(0, -40px);opacity:0.75;
+}
+#loader .b7 {
+  -moz-transform:rotate(270deg) translate(0, -40px);
+  -webkit-transform:rotate(270deg) translate(0, -40px);opacity:0.87;
+}
+#loader .b8 {
+  -moz-transform:rotate(315deg) translate(0, -40px);
+  -webkit-transform:rotate(315deg) translate(0, -40px);opacity:1;
+}
+
+#loader {
+    position: relative;
+    height: 100px;
+    width: 100px;
+    -moz-border-radius: 100px;
+    -webkit-border-radius: 100px;
+    float: left;
+    -moz-transform: scale(0.5);
+    -webkit-transform: scale(0.5);
+
+    -webkit-animation-name: rotateThis;
+    -webkit-animation-duration: 2s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: linear;
+}
+
+#loader div {
+    -webkit-border-radius: 40px;
+    -moz-border-radius: 40px;
+    position:absolute;
+    background: #fff;
+    height: 20px;
+    width: 20px;
+    left: 40px;
+    top: 40px;
+
+  -moz-box-shadow: black 0 0 4px;
+  -webkit-box-shadow: black 0 0 4px;
+}

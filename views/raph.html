@@ -21,7 +21,8 @@
  
     <div class="slider vertical" id="tilt-slider"> 
         <a href="#" class="ui-slider-handle" id="handle-2"></a> 
-    </div> 
+    </div>
+    <div id="msg"></div>
 </div> 
  
 <script type="text/javascript" src="/public/js/jquery.js"></script>
@@ -45,6 +46,35 @@
     }
 </style> 
 <script type="text/javascript"> 
+$.fn.msg = function (type, msg) {
+    var html = "<p>" + msg + "</p>"
+    var loader = "<div id=\"loader\">" +
+        "<div class=\"b1\"></div><div class=\"b2\"></div><div class=\"b3\"></div><div class=\"b4\"></div>" +
+        "<div class=\"b5\"></div><div class=\"b6\"></div><div class=\"b7\"></div><div class=\"b8\"></div></div>";
+    if (type == "loader")
+        html = loader + html;
+    var counter = 0;
+    var el;
+    var t = $(this);
+    var h = $("#content").height();
+    var w = $("#content").width();
+    
+    t.addClass(type).html(html).show().css({height: h - 8, width : w - 5});
+
+    var run = function () {
+        el.style.MozTransform = "scale(0.5) rotate(" + counter + "deg)";
+        el.style.WebkitTransform = "scale(0.5) rotate(" + counter + "deg)";
+        if (counter==360) { counter = 0 }
+        counter += 45;
+        if (t.is(':visible')) window.setTimeout(run, 100);
+    };
+    
+    if (type == "loader") {
+        el = $("#loader").get(0);
+        run();
+    }
+};
+
 $.fn.slider = function (callback, vertical) {
   var cont = this;
   var max = vertical ? cont.height() : cont.width();
@@ -201,7 +231,11 @@ client.on('urbAdded', function (urb) {
   });
 });
 
-$(window).load(function () {
+$(document).ready(function () {
+  $("#msg").msg("loader", "Waiting for available light...");
+  //$("#msg").msg("error", "An error occured.");
+  $("#msg").click(function () { $(this).hide()});
+  
   gCanvas = Raphael(20, 5, 300, 75);
 
   var reg = /^#(.)\1(.)\2(.)\3$/;
@@ -221,7 +255,9 @@ $(window).load(function () {
 
   $("#pan-slider").slider(panCallback);
   $("#tilt-slider").slider(tiltCallback, true);
-
+  $("#content").bind("touchmove", function (e) {
+      e.preventDefault(); // no scrolling from content area
+  });
   client.connect();
 });
 window.top.scrollTo(0, 1);
