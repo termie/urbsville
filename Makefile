@@ -7,7 +7,7 @@ third_party/node_mdns/lib/binding.node:
 	cd third_party/node_mdns && node-waf configure build
 
 public/Socket.IO/socket.io.js: third_party/Socket.IO/socket.io.js
-	ln -f third_party/Socket.IO public/Socket.IO
+	ln -F third_party/Socket.IO public/Socket.IO
 
 public/js/jquery.js: third_party/jquery/dist/jquery.js
 	ln -f third_party/jquery/dist/jquery.js public/js
