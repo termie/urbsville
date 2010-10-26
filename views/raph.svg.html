@@ -4,20 +4,17 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"> 
 <head> 
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/> 
-  <link href="http://fonts.googleapis.com/css?family=Molengo&amp;subset=latin" rel="stylesheet" type="text/css" /> 
-  <link rel="stylesheet" media="all" href="./public/css/main.css" />
-  <link rel="stylesheet" href="/public/farbtastic/farbtastic.css" type="text/css" />
+	<link href="http://fonts.googleapis.com/css?family=Molengo&amp;subset=latin" rel="stylesheet" type="text/css" /> 
+    <link rel="stylesheet" media="all" href="./public/css/main.css" /> 
     <meta name="viewport" content="width=device-width" /> 
 	<title>Urbsville</title>	
 </head> 
  
 <body> 
-  <div id="header"> 
-    <div id="devices" width="200" height="75"></div>
+<div id="header"> 
     <a href="./" id="logo"><em>Urb</em>a<span>node</span></a> 
 </div> 
 <div id="content">
-    <div id="colorpicker"></div>
     <div class="slider" id="pan-slider"> 
         <a href="#" class="ui-slider-handle" id="handle-1"></a> 
     </div> 
@@ -30,15 +27,12 @@
  
 <script type="text/javascript" src="/public/js/jquery.js"></script>
 <script src="/public/js/dojo.js"></script>
-<script src="/public/Socket.IO/socket.io.js"></script>
-<script>WEB_SOCKET_SWF_LOCATION = '/public/Socket.IO/lib/vendor/web-socket-js/WebSocketMain.swf';</script>
+<script src="/public/js/socket.io.js"></script>
+<script>io.setPath('/public/js/');</script>
 <script src="/public/js/urb.js"></script>
-<script src="/public/js/touch.js"></script>
 
-<!--<script type="text/javascript" src="/public/js/raphael.js"></script> -->
-<!--<script type="text/javascript" src="/public/js/colorwheel.js"></script> -->
-<script src="/public/farbtastic/farbtastic.js"></script>
-
+<script type="text/javascript" src="/public/js/raphael.js"></script> 
+<script type="text/javascript" src="/public/js/colorwheel.js"></script> 
 <style type="text/css"> 
     #pan-slider {
         position: absolute;
@@ -51,7 +45,6 @@
         top: 75px;
     }
 </style> 
-
 <script type="text/javascript"> 
 $.fn.msg = function (type, msg) {
     var html = "<p>" + msg + "</p>"
@@ -149,7 +142,7 @@ $.fn.slider = function (callback, vertical) {
   el.get(0).onmousedown = el.get(0).ontouchstart = startDrag;
 };
 
-/* $.fn.updateColor = function (color, callback) {
+$.fn.updateColor = function (color, callback) {
   var update = false;
   var el = this.get(0);
 
@@ -162,7 +155,29 @@ $.fn.slider = function (callback, vertical) {
   el.onmousemove = el.ontouchmove = function () {
     colorCallback(color.toString().toUpperCase());
   };
-};*/
+};
+
+function RGBtoCMYK(R, G, B) {
+    // FIXME: cmyk values aren't too close
+    
+    var result = [0, 0, 0, 0];
+
+	r = R/255;
+	g = G/255;
+	b = B/255;
+
+	result[3] = Math.min( 1 - r, 1 - g, 1 - b );
+	result[0] = ( 1 - r - result[3] ) / ( 1 - result[3] );
+	result[1] = ( 1 - g - result[3] ) / ( 1 - result[3] );
+	result[2] = ( 1 - b - result[3] ) / ( 1 - result[3] );
+
+	result[0] = Math.round( result[0] * 100 );
+	result[1] = Math.round( result[1] * 100 );
+	result[2] = Math.round( result[2] * 100 );
+	result[3] = Math.round( result[3] * 100 );
+
+	return result;    
+}
 
 function panCallback(value) {
   $("#pan-value").html(value);
@@ -179,32 +194,22 @@ function colorCallback(value) {
 
 gCanvas = null;
 gCounter = 0;
-
-gSymbols = ['&hearts;', '&clubs;', '&spades;'];
-
 function newDevice(device) {
   var xOffset = gCounter * 30 + 15;
   gCounter = gCounter + 1;
   console.log('offset: ' + xOffset);
   console.log(device.get('rgbhex'));
-
-  var circle = document.createElement('a');
-  $(circle).html(gSymbols[gCounter % 3]);
-  $(circle).attr('href', 'javascript:setCurrent("' + device.id() + '")');
-  gCanvas.append(circle);
-
+  var circle = gCanvas.circle(xOffset, 20, 15);
   var rgbhex = device.get('rgbhex');
-  $(circle).css('color', rgbhex);
+  circle.attr('fill', rgbhex); 
+  circle.attr('href', 'javascript:setCurrent("' + device.id() + '")');
 
   device.circle = circle;
   device.on('property/rgbhex', function (color) {
-    $(circle).css('color', color);
+    circle.attr('fill', color);
   });
 }
-
-
 function setCurrent(deviceId) {
-  console.log('selecting ' + deviceId);
   gCurrentDevice = client.urb.device(deviceId);
 }
 
@@ -217,7 +222,6 @@ var hostname = window.location.hostname;
 
 var protocol = new sioClient.SioClientProtocol(hostname, {port: 8001});
 var client = new api.ApiClient('admin', protocol);
-//client.on('event', function (e) { console.log(e); });
 
 client.on('urbAdded', function (urb) {
   var devices = urb.devices();
@@ -230,31 +234,32 @@ client.on('urbAdded', function (urb) {
 });
 
 $(document).ready(function () {
-  touchInit();
-  //$("#msg").msg("loader", "Waiting1 for available light...");
+  $("#msg").msg("loader", "Waiting for available light...");
   //$("#msg").msg("error", "An error occured.");
-  //$("#msg").click(function () { $(this).hide()});
-
-
-  gCanvas = $('#devices');
+  $("#msg").click(function () { $(this).hide()});
+  
+  gCanvas = Raphael(20, 5, 300, 75);
 
   var reg = /^#(.)\1(.)\2(.)\3$/;
+  var cp = Raphael.colorwheel(20, 75, 240, "#eee");
 
-  var onchange = function (clr) {
-    console.log(clr);
+  cp.onchange = function (clr) {
+    var rgb = Raphael.getRGB(clr);
+    var cmyk = RGBtoCMYK(rgb.r, rgb.g, rgb.b);
     if (gCurrentDevice) {
-      gCurrentDevice.set('rgbhex', clr);
+      // console.log(cmyk);
+      gCurrentDevice.set('rgb', [rgb.r / 255, rgb.g / 255, rgb.b / 255]);
+
+      //console.log('color! ' + clr);//, [rgb.r, rgb.g, rgb.b], cmyk);
+      //gCurrentDevice.set('bgcolor', clr);
     }
   };
-
-  var cp = $.farbtastic('#colorpicker', onchange);
 
   $("#pan-slider").slider(panCallback);
   $("#tilt-slider").slider(tiltCallback, true);
   $("#content").bind("touchmove", function (e) {
       e.preventDefault(); // no scrolling from content area
   });
-
   client.connect();
 });
 window.top.scrollTo(0, 1);

@@ -30,63 +30,6 @@ var dojo = require('dojo');
  * 3. Announce itself on the local network
  */
 
-var fileServer = new static.Server('./public');
-var urbServer = new static.Server('./lib/urb');
-var viewServer = new static.Server('./views');
-
-function render_admin(request, response) {
-  viewServer.serveFile('admin.html', 200, {}, request, response);
-}
-function render_index(request, response) {
-  viewServer.serveFile('index.html', 200, {}, request, response);
-}
-function render_device(request, response) {
-  viewServer.serveFile('device.html', 200, {}, request, response);
-}
-
-function render_raph(request, response) {
-  viewServer.serveFile('raph.html', 200, {}, request, response);
-}
-
-function render_js3d(request, response) {
-  viewServer.serveFile('js3d.html', 200, {}, request, response);
-}
-
-function render_urb(request, response, file) {
-  try {
-    fs.statSync('./lib/urb/' + file).isFile();
-    var e = urbServer.serveFile(file, 200, {}, request, response);
-  } catch (e) {
-    response.writeHead('404');
-    response.end();
-  }
-}
-
-function render_static(request, response, file) {
-  try {
-    fs.statSync('./public/' + file).isFile();
-    var e = fileServer.serveFile(file, 200, {}, request, response);
-  } catch (e) {
-    response.writeHead('404');
-    response.end();
-  }
-}
-
-var urls = [
-  ['^/admin$', render_admin],
-  ['^/30seconds$', render_device],
-  ['^/js3d$', render_js3d],
-  ['^/raph$', render_raph],
-  ['^/$', render_index],
-  ['^/public/urb/(.*)$', render_urb],
-  ['^/public/(.*)$', render_static]
-];
-
-
-var webServer = http.createServer(function (request, response) {
-  routes.route(request, response, urls);
-});
-
 
 var hub = new urb.Urb('hub');
 
@@ -104,14 +47,14 @@ c1.set('magenta', 1.0);
 c2.set('yellow', 1.0);
 
 var sioProtocol = new sioServer.SioServerProtocol(
-    8001, null, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'jsonp-polling']});
+    8001, null);
 var sioApiServer = new api.ApiServer('sio', sioProtocol, hub);
 
 //var tcpProtocol = new urb_node.TcpServerProtocol(9001, '127.0.0.1');
 //var tcpApiServer = new urb.ApiServer('tcp', tcpProtocol, hub);
 
 var sioDeviceProtocol = new sioServer.SioServerProtocol(
-    8000, webServer, {transports: ['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling']});
+    8002, null);
 var sioDeviceServer = new device.DeviceServer('sio', sioDeviceProtocol, hub);
 
 sioApiServer.on('event', function (event) {

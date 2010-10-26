@@ -275,3 +275,18 @@ div.buttons button, div.buttons a.btn {
   -moz-box-shadow: black 0 0 4px;
   -webkit-box-shadow: black 0 0 4px;
 }
+
+#devices {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
+
+#devices a {
+  font-size: 50px;
+  display: block;
+  clear: none;
+  width: 50px;
+  text-decoration: none;
+  float: left;
+}
