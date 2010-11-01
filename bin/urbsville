@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+// Setup paths
+// TODO(termie): allow this to be run from outside the urbsville checkout
+// TODO(termie): accept command-line arguments to toggle features and logging
+// TODO(termie): add default support for tcp api and device servers
+// TODO(termie): announce socket-io api and device server ports
+require.paths.unshift(__dirname + '/../third_party/');
+require.paths.unshift(__dirname + '/../third_party/node-static/lib/');
+require.paths.unshift(__dirname + '/../third_party/node.routes.js/');
+require.paths.unshift(__dirname + '/../third_party/node_mdns/lib');
+require.paths.unshift(__dirname + '/../third_party/node-dojo/');
+require.paths.unshift(__dirname + '/../lib');
+
+var mdns = require('mdns');
+
+var urb = require('urb/core');
+var sioServer = require('urb/protocol/sioServer');
+var api = require('urb/api');
+var device = require('urb/device');
+
+// Our main container, it will be named "Urb/hub"
+var hub = new urb.Urb('hub');
+
+// Log all hub events to stdout
+hub.on('event', function (event) { console.log(event); });
+
+// Run an API Server named "ApiServer/sio" using the Socket-IO protocol
+var sioApiProtocol = new sioServer.SioServerProtocol(8001);
+var sioApiServer = new api.ApiServer('sio', sioApiProtocol, hub);
+
+// Run a Device Server named "DeviceServer/sio" using the Socket-IO protocol
+var sioDeviceProtocol = new sioServer.SioServerProtocol(8002);
+var sioDeviceServer = new device.DeviceServer('sio', sioDeviceProtocol, hub);
+
+// Announce our web server via mDNS
+// NOTE(termie): this currently expects nginx to serve the static content
+var ad = mdns.createAdvertisement('urbanode-web', 8000);
+
+sioApiServer.listen();
+sioDeviceServer.listen();
+ad.start();
