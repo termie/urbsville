@@ -205,7 +205,7 @@ function newDevice(device) {
 
 function setCurrent(deviceId) {
   console.log('selecting ' + deviceId);
-  gCurrentDevice = client.urb.device(deviceId);
+  gCurrentDevice = client.hub.device(deviceId);
 }
 
 gCurrentDevice = null;
@@ -219,12 +219,12 @@ var protocol = new sioClient.SioClientProtocol(hostname, {port: 8001});
 var client = new api.ApiClient('admin', protocol);
 //client.on('event', function (e) { console.log(e); });
 
-client.on('urbAdded', function (urb) {
-  var devices = urb.devices();
+client.on('hubAdded', function (hub) {
+  var devices = hub.devices();
   for (var d in devices) {
     newDevice(devices[d]);
   }
-  urb.on('deviceAdded', function (device) {
+  hub.on('deviceAdded', function (device) {
     newDevice(device);
   });
 });
