@@ -6,8 +6,6 @@
 // TODO(termie): add default support for tcp api and device servers
 // TODO(termie): announce socket-io api and device server ports
 require.paths.unshift(__dirname + '/../third_party/');
-require.paths.unshift(__dirname + '/../third_party/node-static/lib/');
-require.paths.unshift(__dirname + '/../third_party/node.routes.js/');
 require.paths.unshift(__dirname + '/../third_party/node_mdns/lib');
 require.paths.unshift(__dirname + '/../third_party/node-dojo/');
 require.paths.unshift(__dirname + '/../lib');
@@ -16,6 +14,7 @@ var mdns = require('mdns');
 
 var urb = require('urb/core');
 var sioServer = require('urb/protocol/sioServer');
+var tcp = require('urb/protocol/tcp');
 var api = require('urb/api');
 var device = require('urb/device');
 
@@ -29,9 +28,17 @@ hub.on('event', function (event) { console.log(event); });
 var sioApiProtocol = new sioServer.SioServerProtocol(8001);
 var sioApiServer = new api.ApiServer('sio', sioApiProtocol, hub);
 
+// Run an API Server named "ApiServer/tcp" using the TCP protocol
+var tcpApiProtocol = new tcp.TcpServerProtocol(9001);
+var tcpApiServer = new api.ApiServer('tcp', tcpApiProtocol, hub);
+
 // Run a Device Server named "DeviceServer/sio" using the Socket-IO protocol
 var sioDeviceProtocol = new sioServer.SioServerProtocol(8002);
 var sioDeviceServer = new device.DeviceServer('sio', sioDeviceProtocol, hub);
+
+// Run a Device Server named "DeviceServer/tcp" using the TCP protocol
+var tcpDeviceProtocol = new tcp.TcpServerProtocol(9002);
+var tcpDeviceServer = new device.DeviceServer('tcp', tcpDeviceProtocol, hub);
 
 // Announce our web server via mDNS
 // NOTE(termie): this currently expects nginx to serve the static content
@@ -39,4 +46,6 @@ var ad = mdns.createAdvertisement('urbanode-web', 8000);
 
 sioApiServer.listen();
 sioDeviceServer.listen();
+tcpApiServer.listen();
+tcpDeviceServer.listen();
 ad.start();
