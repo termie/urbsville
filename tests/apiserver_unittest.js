@@ -7,7 +7,7 @@ var urb = require('urb');
 
 var ApiServerTestCase = dojo.declare(test.BaseTestCase, {
   testBasic: function () {
-    var hub = new urb.Urb('urb1');
+    var hub = new urb.Hub('urb1');
     var protocol = new urb.ServerProtocol();
     var server = new urb.ApiServer('example', protocol, hub);
 
@@ -22,7 +22,7 @@ var ApiServerTestCase = dojo.declare(test.BaseTestCase, {
     var expecter = this.mock.createMock();
     expecter.addMockMethod('send');
     expecter.expects().send(jsmock.isA(Object)).andStub(
-      this.matchObject({topic: 'urbAdded',
+      this.matchObject({topic: 'hubAdded',
                         emitter: client.id(),
                         data: hub})
     );

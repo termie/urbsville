@@ -20,7 +20,7 @@ var api = require('urb/api');
 var device = require('urb/device');
 
 // Our main container, it will be named "Urb/hub"
-var hub = new urb.Urb('hub');
+var hub = new urb.Hub('hub');
 
 // Log all hub events to stdout
 hub.on('event', function (event) { console.log(event); });

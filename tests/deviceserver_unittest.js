@@ -7,7 +7,7 @@ var urb = require('urb');
 
 var DeviceServerTestCase = dojo.declare(test.BaseTestCase, {
   testBasic: function () {
-    var hub = new urb.Urb('urb1');
+    var hub = new urb.Hub('urb1');
     var protocol = new urb.ServerProtocol();
     var server = new urb.DeviceServer('example', protocol, hub);
     var client = new urb.Client('name', new urb.ClientProtocol());

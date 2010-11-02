@@ -23,8 +23,8 @@ The Default Server
 If you were to look inside bin/urbsville you would see something that looks
 similar to::
 
-  // Our main container, it will be named "Urb/hub"
-  var hub = new urb.Urb('hub');
+  // Our main container, it will be named "Hub/hub"
+  var hub = new urb.Hub('hub');
 
   // Log all hub events to stdout
   hub.on('event', function (event) { console.log(event); });
@@ -86,12 +86,12 @@ Using the directory structure in the project you'll end up with::
     // do something cool with the device, hook it up to some ui
   }
 
-  client.on('urbAdded', function (urb) {
-    var devices = urb.devices();
+  client.on('hubAdded', function (hub) {
+    var devices = hub.devices();
     for (var d in devices) {
       newDevice(devices[d]);
     }
-    urb.on('deviceAdded', function (device) {
+    hub.on('deviceAdded', function (device) {
       newDevice(device);
     });
   });
@@ -228,7 +228,7 @@ interacted with via proxy instances.
 The Proxy
 ---------
 
-There are actually two types of Proxy, DeviceProxy and UrbProxy, but they are
+There are actually two types of Proxy, DeviceProxy and HubProxy, but they are
 effectively the same, both are simply intended to act exactly like their
 non-proxy counterpart but to forward write actions across a network boundary
 and to replay events received over that boundary.
