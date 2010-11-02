@@ -64,7 +64,7 @@ together.
 
 Using the directory structure in the project you'll end up with::
 
-  <script src="/public/js/dojo.js"></script>
+  <script src="/public/dojo/dojo.js"></script>
   <script src="/public/js/socket.io.js"></script>
   <script>io.setPath('/public/js/');</script>
   <script src="/public/js/urb.js"></script>
