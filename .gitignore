@@ -4,3 +4,9 @@ public/farbtastic
 public/Socket.IO
 jsdoc
 tools
+etc/nginx/logs
+etc/nginx/client_temp
+etc/nginx/fastcgi_tmp
+etc/nginx/scgi_tmp
+etc/nginx/uwsgi_tmp
+etc/nginx/proxy_tmp
