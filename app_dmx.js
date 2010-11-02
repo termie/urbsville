@@ -1,13 +1,8 @@
 require.paths.unshift('./third_party/');
-require.paths.unshift('./third_party/node-static/lib/');
-require.paths.unshift('./third_party/node.routes.js/');
 require.paths.unshift('./third_party/node_mdns/lib');
 require.paths.unshift('./third_party/node-dojo/');
 require.paths.unshift('./lib');
 
-var http = require('http');
-var sys = require('sys');
-var fs = require('fs');
 var mdns = require('mdns');
 var urb = require('urb');
 
@@ -18,8 +13,6 @@ var colored = require('urb/devices/colored');
   
 
 var io = require('Socket.IO-node');
-var static = require('node-static');
-var routes = require('routes');
 var dojo = require('dojo');
 var dmx = require('urb/dmx');
 var olad = require('urb/protocol/olad');
@@ -34,7 +27,7 @@ var pipe = require('urb/pipe');
  */
 
 
-var hub = new urb.Urb('hub');
+var hub = new urb.Hub('hub');
 
 // Let's add some colored devices
 var c1 = new colored.CmykDevice('c1', { /* settings here for default ports */ });
@@ -72,12 +65,6 @@ var loop = function () {
 }
 
 loop();
-
-
-
-
-
-
 
 var sioProtocol = new sioServer.SioServerProtocol(
     8001, null);

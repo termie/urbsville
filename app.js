@@ -1,13 +1,8 @@
 require.paths.unshift('./third_party/');
-require.paths.unshift('./third_party/node-static/lib/');
-require.paths.unshift('./third_party/node.routes.js/');
 require.paths.unshift('./third_party/node_mdns/lib');
 require.paths.unshift('./third_party/node-dojo/');
 require.paths.unshift('./lib');
 
-var http = require('http');
-var sys = require('sys');
-var fs = require('fs');
 var mdns = require('mdns');
 var urb = require('urb');
 
@@ -18,8 +13,6 @@ var colored = require('urb/devices/colored');
   
 
 var io = require('Socket.IO-node');
-var static = require('node-static');
-var routes = require('routes');
 var dojo = require('dojo');
 
 
@@ -31,7 +24,7 @@ var dojo = require('dojo');
  */
 
 
-var hub = new urb.Urb('hub');
+var hub = new urb.Hub('hub');
 
 // Let's add some colored devices
 var c1 = colored.CmykDevice('c1');
