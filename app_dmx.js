@@ -66,8 +66,7 @@ var loop = function () {
 
 loop();
 
-var sioProtocol = new sioServer.SioServerProtocol(
-    8001, null);
+var sioProtocol = new sioServer.SioServerProtocol(8001, null);
 var sioApiServer = new api.ApiServer('sio', sioProtocol, hub);
 
 //var tcpProtocol = new urb_node.TcpServerProtocol(9001, '127.0.0.1');

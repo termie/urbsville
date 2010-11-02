@@ -217,7 +217,7 @@ var hostname = window.location.hostname;
 
 var protocol = new sioClient.SioClientProtocol(hostname, {port: 8001});
 var client = new api.ApiClient('admin', protocol);
-//client.on('event', function (e) { console.log(e); });
+client.on('event', function (e) { console.log(e); });
 
 client.on('hubAdded', function (hub) {
   var devices = hub.devices();
